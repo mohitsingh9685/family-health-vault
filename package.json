@@ -2,8 +2,9 @@
   "name": "family-health-vault",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --experimental-next-config-strip-types",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
