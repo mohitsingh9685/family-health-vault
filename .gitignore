@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Generated Prisma client; it is rebuilt from prisma/schema.prisma.
+/src/generated/prisma/
+
+# Local Auth.js test cookies
+cookies.txt
