@@ -8,20 +8,22 @@ datasource db {
 }
 
 model User {
-  id                String         @id @default(uuid())
-  email             String         @unique
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
+  id                String             @id @default(uuid())
+  email             String             @unique
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
   passwordHash      String
   familyMemberships FamilyMember[]
+  familyInvitations FamilyInvitation[]
 }
 
 model Family {
-  id        String         @id @default(uuid())
-  name      String
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  members   FamilyMember[]
+  id          String             @id @default(uuid())
+  name        String
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  members     FamilyMember[]
+  invitations FamilyInvitation[]
 }
 
 model FamilyMember {
@@ -30,11 +32,29 @@ model FamilyMember {
   familyId  String
   createdAt DateTime   @default(now())
   role      FamilyRole @default(MEMBER)
-  family    Family     @relation(fields: [familyId], references: [id], onDelete: Cascade)
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, familyId])
   @@index([familyId])
+}
+
+model FamilyInvitation {
+  id              String    @id @default(uuid())
+  familyId        String
+  invitedByUserId String
+  email           String
+  tokenHash       String    @unique
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  createdAt       DateTime  @default(now())
+
+  family    Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  invitedBy User   @relation(fields: [invitedByUserId], references: [id], onDelete: Cascade)
+
+  @@index([familyId])
+  @@index([email])
 }
 
 enum FamilyRole {
