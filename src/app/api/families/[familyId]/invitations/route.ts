@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { randomBytes, createHash } from "crypto";
+import { createHash, randomBytes } from "crypto";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -7,14 +7,13 @@ import {
   AuthorizationError,
   requireFamilyOwner,
 } from "@/lib/auth/authorization";
-import { createFamilyInvitationSchema } from "@/lib/validation/family-invitation";
 
-// [Auth.js → Family Invitation API]
-// Creates an invitation only for an authenticated family owner.
 export async function POST(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ familyId: string }> }
 ) {
+  // [Auth.js → Invitation API]
+  // Only authenticated users can create family invitations.
   const session = await auth();
 
   if (!session?.user?.id) {
@@ -27,99 +26,58 @@ export async function POST(
   const { familyId } = await params;
 
   try {
-    // [Authorization → Family Invitation]
-    // Only the family owner can invite new members.
+    // [Authorization → Invitation API]
+    // Only the owner of this family can generate invitation codes.
     await requireFamilyOwner(session.user.id, familyId);
 
-    // [Client → Validation]
-    // Validate the untrusted request body.
-    const body = await request.json();
-    const result = createFamilyInvitationSchema.safeParse(body);
+    // [Security → Invitation Code]
+    // Generate a cryptographically secure random value.
+    // The raw code is shown once to the owner; only its hash is stored.
+    const code = randomBytes(6)
+      .toString("hex")
+      .toUpperCase();
 
-    if (!result.success) {
-      return NextResponse.json(
-        {
-          error:
-            result.error.issues[0]?.message ?? "Invalid request",
-        },
-        { status: 400 }
-      );
-    }
-
-    const email = result.data.email.toLowerCase();
-
-    // [Prisma → User]
-    // If the email already belongs to a family member,
-    // there is no reason to create another membership.
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-      select: { id: true },
-    });
-
-    if (existingUser) {
-      const existingMembership =
-        await prisma.familyMember.findUnique({
-          where: {
-            userId_familyId: {
-              userId: existingUser.id,
-              familyId,
-            },
-          },
-        });
-
-      if (existingMembership) {
-        return NextResponse.json(
-          { error: "User is already a family member" },
-          { status: 409 }
-        );
-      }
-    }
-
-    // [Security → Invitation Token]
-    // Generate a random token for the invitation link.
-    // Only its SHA-256 hash is stored in the database.
-    const token = randomBytes(32).toString("hex");
+    // [Security → Database]
+    // Store only the SHA-256 hash, never the usable invitation code.
     const tokenHash = createHash("sha256")
-      .update(token)
+      .update(code)
       .digest("hex");
 
     // [Invitation → Expiration]
-    // Invitations remain valid for 7 days.
+    // Invitation codes are valid for 7 days.
     const expiresAt = new Date(
       Date.now() + 7 * 24 * 60 * 60 * 1000
     );
 
     // [Prisma → FamilyInvitation]
-    // Store only the hashed token, never the raw token.
+    // Store the hashed code and invitation metadata.
     const invitation = await prisma.familyInvitation.create({
       data: {
         familyId,
         invitedByUserId: session.user.id,
-        email,
         tokenHash,
         expiresAt,
       },
       select: {
         id: true,
-        email: true,
         expiresAt: true,
         createdAt: true,
       },
     });
 
-    // [API → Client]
-    // The raw token will later be used to construct the invitation
-    // link and should be sent through a secure email service.
+    // [Invitation API → Family Owner UI]
+    // Return the raw code only when it is generated.
+    // It is never stored in the database.
     return NextResponse.json(
       {
         invitation,
-        token,
+        code,
       },
       { status: 201 }
     );
   } catch (error) {
-    // [Authorization → API]
-    // Convert authorization failures into a 403 response.
+    // [Authorization → Invitation API]
+    // Convert ownership failures into a safe 403 response.
     if (error instanceof AuthorizationError) {
       return NextResponse.json(
         { error: "Forbidden" },
@@ -127,12 +85,12 @@ export async function POST(
       );
     }
 
-    // [API → Error Handling]
-    // Never expose internal database errors to the client.
-    console.error("Failed to create family invitation:", error);
+    // [Invitation API → Error Handling]
+    // Never expose internal database/security details to the client.
+    console.error("Failed to create invitation:", error);
 
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Failed to create invitation" },
       { status: 500 }
     );
   }

@@ -44,17 +44,20 @@ model FamilyInvitation {
   id              String    @id @default(uuid())
   familyId        String
   invitedByUserId String
-  email           String
   tokenHash       String    @unique
   expiresAt       DateTime
   acceptedAt      DateTime?
   createdAt       DateTime  @default(now())
 
-  family    Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
-  invitedBy User   @relation(fields: [invitedByUserId], references: [id], onDelete: Cascade)
+  // [FamilyInvitation → Family]
+  // The invitation belongs to a specific family.
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  // [FamilyInvitation → User]
+  // Tracks which family owner created the invitation.
+  invitedBy User @relation(fields: [invitedByUserId], references: [id], onDelete: Cascade)
 
   @@index([familyId])
-  @@index([email])
 }
 
 enum FamilyRole {
