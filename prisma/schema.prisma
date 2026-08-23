@@ -13,8 +13,35 @@ model User {
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   passwordHash      String
+
+  // [User → Profile]
+  // One authentication account owns one personal profile.
+  profile           Profile?
+
+  // [User → FamilyMember]
   familyMemberships FamilyMember[]
+
+  // [User → FamilyInvitation]
   familyInvitations FamilyInvitation[]
+}
+
+model Profile {
+  // [Profile]
+  // Stores personal information separately from authentication data.
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  name        String
+  dateOfBirth DateTime?
+  gender      String?
+  phone       String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+// [Profile → User]
+// Deleting the user also removes their profile.
+user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
 }
 
 model Family {

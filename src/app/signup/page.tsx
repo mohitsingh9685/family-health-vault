@@ -1,7 +1,9 @@
+
 "use client";
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
+import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
 export default function SignupPage() {
@@ -20,16 +22,19 @@ export default function SignupPage() {
     setError("");
     setIsSubmitting(true);
 
+    const normalizedEmail = email.trim().toLowerCase();
+
     try {
-      // [Signup UI → /api/auth/signup]
-      // The server handles validation, hashing, and user creation.
+      // [Signup UI → Signup API]
+      // The server validates the input, hashes the password,
+      // and creates the user in PostgreSQL.
       const response = await fetch("/api/auth/signup", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          email: email.trim(),
+          email: normalizedEmail,
           password,
         }),
       });
@@ -43,13 +48,41 @@ export default function SignupPage() {
         return;
       }
 
+      // ------------------------------------------------------------
       // [Signup → Auth.js]
-      // After account creation, send the user to the existing
-      // Auth.js sign-in screen.
-      router.push("/api/auth/signin");
+      //
+      // The signup API creates the database account.
+      // Auth.js now creates the authenticated session.
+      //
+      // This removes the unnecessary second signin step.
+      // ------------------------------------------------------------
+      const signInResult = await signIn("credentials", {
+        email: normalizedEmail,
+        password,
+        redirect: false,
+      });
+
+      // [Auth.js → Signup UI]
+      // If Auth.js could not create the session, do not continue
+      // into protected onboarding pages.
+      if (!signInResult || signInResult.error) {
+        setError(
+          "Account was created, but automatic sign in failed. Please sign in manually."
+        );
+        return;
+      }
+
+      // ------------------------------------------------------------
+      // [Auth.js Session → Profile Onboarding]
+      //
+      // The user is now authenticated, so they can safely enter
+      // the protected onboarding/profile flow.
+      // ------------------------------------------------------------
+      router.push("/onboarding/profile");
+      router.refresh();
     } catch {
-      // [Network → Signup UI]
-      // Handle unexpected request failures.
+      // [Network/Auth.js → Signup UI]
+      // Handle unexpected network or authentication failures.
       setError("Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -58,7 +91,7 @@ export default function SignupPage() {
 
   return (
     // [Signup UI]
-    // Explicit background/text classes prevent global dark styling
+    // Explicit background/text classes prevent global styling
     // from making the signup content unreadable.
     <main className="min-h-[calc(100vh-73px)] bg-slate-50 px-6 py-12 text-slate-950">
       <div className="mx-auto flex min-h-[calc(100vh-169px)] max-w-md items-center justify-center">
@@ -79,7 +112,7 @@ export default function SignupPage() {
           </div>
 
           {/* [Signup UI → Signup API]
-              This form submits to the existing /api/auth/signup route. */}
+              This form submits to the existing signup endpoint. */}
           <form
             onSubmit={handleSubmit}
             className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
@@ -124,7 +157,7 @@ export default function SignupPage() {
               className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-950 placeholder:text-slate-400 outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-100 disabled:bg-slate-100"
             />
 
-            {/* [Signup API → Error UI] */}
+            {/* [Signup API/Auth.js → Error UI] */}
             {error && (
               <p
                 role="alert"
@@ -144,11 +177,11 @@ export default function SignupPage() {
             </button>
 
             {/* [Signup → Existing Auth.js Sign-in]
-                Existing users can move to the sign-in flow. */}
+                Existing users can still move to the normal signin flow. */}
             <p className="mt-5 text-center text-sm text-slate-600">
               Already have an account?{" "}
               <Link
-                href="/api/auth/signin"
+                href="/signin"
                 className="font-semibold text-teal-700 hover:text-teal-800"
               >
                 Sign in

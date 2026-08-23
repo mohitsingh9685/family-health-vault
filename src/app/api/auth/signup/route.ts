@@ -1,13 +1,18 @@
+
 import { NextResponse } from "next/server";
+
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
 import { signupSchema } from "@/lib/validation/auth";
 
 export async function POST(req: Request) {
   try {
+    // [Signup UI → Signup API]
+    // Request data comes from the browser and must never be trusted.
     const body = await req.json();
 
-    // Validate incoming data
+    // [Signup API → Validation]
+    // Validate email/password before touching the database.
     const result = signupSchema.safeParse(body);
 
     if (!result.success) {
@@ -17,11 +22,14 @@ export async function POST(req: Request) {
       );
     }
 
-    const {email, password } = result.data;
+    const { email, password } = result.data;
 
-    // Check whether email is already registered
+    // [Validation → Prisma]
+    // Check whether the email is already registered.
     const existingUser = await prisma.user.findUnique({
-      where: { email },
+      where: {
+        email,
+      },
     });
 
     if (existingUser) {
@@ -31,23 +39,36 @@ export async function POST(req: Request) {
       );
     }
 
-    // Never store the plain password
+    // [Signup API → Password Security]
+    // Never store the user's plain-text password.
     const passwordHash = await hashPassword(password);
 
-   // [Prisma schema] Create the user using only fields defined in User.
-const user = await prisma.user.create({
-  data: {
-    email,
-    passwordHash,
-  },
-  select: {
-    id: true,
-    email: true,
-  },
-});
+    // [Password Security → Prisma]
+    // Store only the password hash.
+    const user = await prisma.user.create({
+      data: {
+        email,
+        passwordHash,
+      },
+      select: {
+        id: true,
+        email: true,
+      },
+    });
 
-    return NextResponse.json(user, { status: 201 });
-  } catch {
+    // [Signup API → Signup UI]
+    // Return only the minimum safe account information.
+    //
+    // Auth.js session creation happens separately in signup/page.tsx.
+    return NextResponse.json(user, {
+      status: 201,
+    });
+  } catch (error) {
+    // [Signup API → Error Handling]
+    // Log the real error server-side without exposing database
+    // or implementation details to the client.
+    console.error("Failed to create account:", error);
+
     return NextResponse.json(
       { error: "Something went wrong" },
       { status: 500 }

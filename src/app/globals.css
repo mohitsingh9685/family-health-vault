@@ -1,26 +1,36 @@
 @import "tailwindcss";
 
 :root {
+  /* ------------------------------------------------------------
+     [Global Theme]
+     Family Health Vault currently uses a light application theme.
+     We should not automatically inherit the OS dark-mode setting
+     until we intentionally build and test a dark theme.
+     ------------------------------------------------------------ */
   --background: #ffffff;
   --foreground: #171717;
 }
 
 @theme inline {
+  /* [Tailwind Theme]
+     Makes the global colors available to Tailwind. */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
+  /* [Layout → Typography]
+     Uses the Geist fonts configured in src/app/layout.tsx. */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
+  /* [Global Layout]
+     Individual pages can still use their own Tailwind
+     background classes such as bg-slate-50. */
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+
+  /* [Typography]
+     Use the Geist font already loaded by layout.tsx. */
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }

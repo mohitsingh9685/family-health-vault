@@ -45,7 +45,7 @@ export default function JoinFamilyPage() {
 
       // [Invitation API → Family Dashboard]
       // The response contains the familyId created by the membership.
-      router.push(`/family/${data.familyId}`);
+      router.push(`/home?familyId=${data.familyId}`);
     } catch {
       // [Network → Join Family UI]
       // Handle unexpected network failures.

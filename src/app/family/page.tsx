@@ -1,8 +1,8 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { redirect } from "next/navigation";
 
 export default async function FamilyListPage() {
   // [Auth.js → Family List]
@@ -10,11 +10,12 @@ export default async function FamilyListPage() {
   const session = await auth();
 
   if (!session?.user?.id) {
-    redirect("/");
+    redirect("/signin");
   }
 
   // [Family List → Prisma]
-  // A user can belong to multiple families, so fetch all memberships.
+  // A user can belong to multiple families, so fetch all
+  // memberships belonging to the authenticated user.
   const memberships = await prisma.familyMember.findMany({
     where: {
       userId: session.user.id,
@@ -34,14 +35,13 @@ export default async function FamilyListPage() {
   });
 
   // [Family List → Onboarding]
-  // If the user has no family yet, send them to family setup.
+  // If the user does not belong to any family yet,
+  // send them to the family setup flow.
   if (memberships.length === 0) {
     redirect("/onboarding");
   }
 
   return (
-    // [Family List UI]
-    // Explicit light colors prevent global styles from hiding the content.
     <section className="min-h-[calc(100vh-73px)] bg-slate-50 px-6 py-12 text-slate-950">
       <div className="mx-auto max-w-4xl">
         {/* [Family List → Header] */}
@@ -49,7 +49,7 @@ export default async function FamilyListPage() {
           Your families
         </p>
 
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
+        <h1 className="mt-2 text-3xl font-bold tracking-tight">
           Choose a family
         </h1>
 
@@ -57,33 +57,43 @@ export default async function FamilyListPage() {
           Select the family health vault you want to open.
         </p>
 
-        {/* [Family List → Family Dashboard]
-            Each family opens through its authorized family route. */}
+        {/* ----------------------------------------------------------
+            [Family Switcher → Home Dashboard]
+
+            A family is NOT opened as a separate dashboard anymore.
+
+            Clicking a family sends the user to:
+              /home?familyId=<family-id>
+
+            The /home page then loads that selected family's data.
+            ---------------------------------------------------------- */}
         <div className="mt-8 grid gap-4 sm:grid-cols-2">
           {memberships.map((membership) => (
             <Link
               key={membership.family.id}
-              href={`/family/${membership.family.id}`}
+              href={`/home?familyId=${membership.family.id}`}
               className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-teal-300 hover:shadow-md"
             >
+              {/* [Family Switcher → Family Name] */}
               <h2 className="text-xl font-semibold text-slate-950">
                 {membership.family.name}
               </h2>
 
+              {/* [Family Switcher → User Role] */}
               <p className="mt-2 text-sm text-slate-600">
                 Role: {membership.role}
               </p>
 
+              {/* [Family Switcher → Action] */}
               <span className="mt-5 inline-block text-sm font-semibold text-teal-700">
-                Open family →
+                Switch to family →
               </span>
             </Link>
           ))}
         </div>
 
         {/* [Family List → Onboarding]
-            Users can create or join another family because the
-            application supports multiple family memberships. */}
+            Users can create or join another family. */}
         <Link
           href="/onboarding"
           className="mt-6 inline-block rounded-lg bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
