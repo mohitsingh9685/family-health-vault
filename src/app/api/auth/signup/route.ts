@@ -34,19 +34,17 @@ export async function POST(req: Request) {
     // Never store the plain password
     const passwordHash = await hashPassword(password);
 
-    // Create the user in PostgreSQL
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        passwordHash,
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-      },
-    });
+   // [Prisma schema] Create the user using only fields defined in User.
+const user = await prisma.user.create({
+  data: {
+    email,
+    passwordHash,
+  },
+  select: {
+    id: true,
+    email: true,
+  },
+});
 
     return NextResponse.json(user, { status: 201 });
   } catch {
