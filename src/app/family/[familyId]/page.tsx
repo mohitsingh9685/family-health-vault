@@ -4,8 +4,16 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
 // [Family Dashboard → Invitation UI]
-// Client component used only for generating invitation codes.
+// Client component for generating invitation codes.
 import { InviteCode } from "./invite-code";
+
+// [Family Dashboard → Member Actions]
+// Client component for removing members and leaving a family.
+import { MemberActions } from "./member-actions";
+
+// [Family Dashboard → Family Settings]
+// Client component for renaming and deleting a family.
+import { FamilySettings } from "./family-settings";
 
 type FamilyPageProps = {
   params: Promise<{
@@ -66,16 +74,16 @@ export default async function FamilyPage({
   });
 
   // [Authorization → Family Dashboard]
-  // Do not expose family information to non-members.
+  // Non-members cannot access family information.
   if (!membership) {
     notFound();
   }
 
   const { family } = membership;
+  const isOwner = membership.role === "OWNER";
 
   return (
     // [Family Dashboard UI]
-    // Explicit light colors prevent globals.css from hiding content.
     <section className="min-h-[calc(100vh-73px)] bg-slate-50 px-6 py-12 text-slate-950">
       <div className="mx-auto max-w-5xl">
         {/* [Family Dashboard → Family Information] */}
@@ -104,9 +112,10 @@ export default async function FamilyPage({
             {family.members.map((member) => (
               <div
                 key={member.id}
-                className="flex items-center justify-between py-4"
+                className="flex items-center justify-between gap-4 py-4"
               >
-                <div>
+                {/* [Family Dashboard → Member Information] */}
+                <div className="min-w-0">
                   <p className="font-medium text-slate-950">
                     {member.user.email}
                   </p>
@@ -115,17 +124,40 @@ export default async function FamilyPage({
                     {member.role}
                   </p>
                 </div>
+
+                {/* [Family Dashboard → Member Actions]
+                    OWNER can remove MEMBERs.
+                    MEMBER can leave their own family.
+                    Server APIs independently enforce authorization. */}
+                <MemberActions
+                  familyId={family.id}
+                  memberId={member.id}
+                  isOwner={isOwner}
+                  isCurrentUser={
+                    member.user.id === session.user.id
+                  }
+                  memberRole={member.role}
+                />
               </div>
             ))}
           </div>
         </section>
 
         {/* [Family Dashboard → Owner Invitation]
-            The component is hidden for normal members.
+            Only the OWNER sees invitation controls.
             The API independently verifies OWNER authorization. */}
         <InviteCode
           familyId={family.id}
-          isOwner={membership.role === "OWNER"}
+          isOwner={isOwner}
+        />
+
+        {/* [Family Dashboard → Family Settings]
+            Only the OWNER sees rename/delete controls.
+            The API independently verifies OWNER authorization. */}
+        <FamilySettings
+          familyId={family.id}
+          familyName={family.name}
+          isOwner={isOwner}
         />
 
         {/* [Family Dashboard → Future Medical Records]

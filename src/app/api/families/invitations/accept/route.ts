@@ -32,15 +32,17 @@ export async function POST(request: Request) {
 
     // [Security → Invitation Code]
     // Hash the submitted code before looking it up.
+    // The raw invitation code is never stored in the database.
     const tokenHash = createHash("sha256")
       .update(result.data.code)
       .digest("hex");
 
     // [Invitation → Family Membership]
-    // Membership creation and invitation consumption are atomic.
+    // Membership creation and invitation consumption happen
+    // inside one database transaction.
     const membership = await prisma.$transaction(async (tx) => {
       // [Prisma → FamilyInvitation]
-      // Find the family associated with this invitation code.
+      // Find the invitation associated with the submitted code.
       const invitation = await tx.familyInvitation.findUnique({
         where: {
           tokenHash,
@@ -52,34 +54,57 @@ export async function POST(request: Request) {
       }
 
       // [Invitation → Expiration]
-      // Expired codes cannot be accepted.
+      // Expired invitations cannot be accepted.
       if (invitation.expiresAt <= new Date()) {
         throw new Error("INVITATION_EXPIRED");
       }
 
       // [Invitation → One-Time Use]
-      // An invitation can only be consumed once.
+      // Fast application-level check before attempting the atomic claim.
       if (invitation.acceptedAt) {
         throw new Error("INVITATION_ALREADY_ACCEPTED");
       }
 
-      // [FamilyMember → Duplicate Protection]
-      // Prevent duplicate membership in the same family.
-      const existingMembership = await tx.familyMember.findUnique({
-        where: {
-          userId_familyId: {
-            userId: session.user.id,
-            familyId: invitation.familyId,
+      // [Invitation → Atomic Claim]
+      // The database atomically marks the invitation as accepted
+      // only if another request has not already consumed it.
+      const claimedInvitation =
+        await tx.familyInvitation.updateMany({
+          where: {
+            id: invitation.id,
+            acceptedAt: null,
           },
-        },
-      });
+          data: {
+            acceptedAt: new Date(),
+          },
+        });
+
+      // [Invitation → Race Condition Protection]
+      // If no row was updated, another request consumed the
+      // invitation between our read and this update.
+      if (claimedInvitation.count !== 1) {
+        throw new Error("INVITATION_ALREADY_ACCEPTED");
+      }
+
+      // [FamilyMember → Duplicate Protection]
+      // A user can belong to multiple families, but only once
+      // to the same family.
+      const existingMembership =
+        await tx.familyMember.findUnique({
+          where: {
+            userId_familyId: {
+              userId: session.user.id,
+              familyId: invitation.familyId,
+            },
+          },
+        });
 
       if (existingMembership) {
         throw new Error("ALREADY_MEMBER");
       }
 
       // [Prisma → FamilyMember]
-      // Add the authenticated user as a normal member.
+      // Add the authenticated user as a normal family member.
       const newMembership = await tx.familyMember.create({
         data: {
           userId: session.user.id,
@@ -94,24 +119,15 @@ export async function POST(request: Request) {
         },
       });
 
-      // [FamilyInvitation → One-Time Use]
-      // Mark the invitation as consumed.
-      await tx.familyInvitation.update({
-        where: {
-          id: invitation.id,
-        },
-        data: {
-          acceptedAt: new Date(),
-        },
-      });
-
       return newMembership;
     });
 
     // [Join Family API → Family Dashboard]
+    // Return the newly created membership.
     return NextResponse.json(membership, { status: 201 });
   } catch (error) {
     // [Join Family API → Known Errors]
+    // Convert expected invitation failures into safe responses.
     if (error instanceof Error) {
       switch (error.message) {
         case "INVALID_INVITATION":
@@ -124,7 +140,10 @@ export async function POST(request: Request) {
 
         case "ALREADY_MEMBER":
           return NextResponse.json(
-            { error: "You are already a member of this family" },
+            {
+              error:
+                "You are already a member of this family",
+            },
             { status: 409 }
           );
       }
@@ -132,7 +151,10 @@ export async function POST(request: Request) {
 
     // [API → Error Handling]
     // Never expose internal database errors to the client.
-    console.error("Failed to accept family invitation:", error);
+    console.error(
+      "Failed to accept family invitation:",
+      error
+    );
 
     return NextResponse.json(
       { error: "Failed to join family" },
