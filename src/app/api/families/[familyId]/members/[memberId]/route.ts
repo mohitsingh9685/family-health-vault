@@ -75,13 +75,37 @@ export async function DELETE(
       );
     }
 
-    // [Prisma → FamilyMember]
-    // Delete only the membership, not the user's account.
-    await prisma.familyMember.delete({
-      where: {
-        id: membership.id,
-      },
-    });
+    // [Prisma Transaction → Family Access]
+    // Remove this user's access to their medical data in this family,
+    // then remove their family membership.
+    //
+    // The actual MedicalRecord and HealthMeasurement rows remain
+    // because they belong permanently to the user.
+    await prisma.$transaction([
+      prisma.medicalRecordAccess.deleteMany({
+        where: {
+          familyId,
+          medicalRecord: {
+            userId: membership.userId,
+          },
+        },
+      }),
+
+      prisma.healthMeasurementAccess.deleteMany({
+        where: {
+          familyId,
+          measurement: {
+            userId: membership.userId,
+          },
+        },
+      }),
+
+      prisma.familyMember.delete({
+        where: {
+          id: membership.id,
+        },
+      }),
+    ]);
 
     return NextResponse.json({
       message: "Family member removed successfully",

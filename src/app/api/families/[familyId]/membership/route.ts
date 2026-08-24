@@ -39,8 +39,8 @@ export async function DELETE(
     );
 
     // [FamilyRole → Leave Family API]
-    // The only OWNER cannot leave because that would leave the
-    // family without an owner.
+    // The OWNER cannot leave because that would leave the family
+    // without an owner.
     if (membership.role === "OWNER") {
       return NextResponse.json(
         {
@@ -51,16 +51,38 @@ export async function DELETE(
       );
     }
 
-    // [Prisma → FamilyMember]
-    // Remove only this user's membership.
-    // The user's account and other family memberships remain untouched.
-    await prisma.familyMember.delete({
-      where: {
-        id: membership.id,
-      },
-    });
+    // [Prisma Transaction → Family Access]
+    // Remove this user's access to their medical data in this family,
+    // then remove their family membership.
+    //
+    // Their actual medical records and measurements remain owned
+    // by the user and are not deleted.
+    await prisma.$transaction([
+      prisma.medicalRecordAccess.deleteMany({
+        where: {
+          familyId,
+          medicalRecord: {
+            userId: session.user.id,
+          },
+        },
+      }),
 
-    // [Leave Family API → Client]
+      prisma.healthMeasurementAccess.deleteMany({
+        where: {
+          familyId,
+          measurement: {
+            userId: session.user.id,
+          },
+        },
+      }),
+
+      prisma.familyMember.delete({
+        where: {
+          id: membership.id,
+        },
+      }),
+    ]);
+
     return NextResponse.json({
       message: "You have left the family successfully",
     });

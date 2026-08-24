@@ -8,57 +8,49 @@ datasource db {
 }
 
 model User {
-  id                String             @id @default(uuid())
-  email             String             @unique
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  passwordHash      String
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  // [User → Profile]
-  // One authentication account owns one personal profile.
-  profile           Profile?
-
-  // [User → FamilyMember]
-  familyMemberships FamilyMember[]
-
-  // [User → FamilyInvitation]
-  familyInvitations FamilyInvitation[]
+  profile            Profile?
+  familyMemberships  FamilyMember[]
+  familyInvitations  FamilyInvitation[]
+  medicalRecords     MedicalRecord[]
+  healthMeasurements HealthMeasurement[]
 }
 
 model Profile {
-  // [Profile]
-  // Stores personal information separately from authentication data.
   id          String   @id @default(uuid())
   userId      String   @unique
   name        String
   dateOfBirth DateTime?
   gender      String?
   phone       String?
-
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-// [Profile → User]
-// Deleting the user also removes their profile.
-user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Family {
-  id          String             @id @default(uuid())
-  name        String
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
-  members     FamilyMember[]
-  invitations FamilyInvitation[]
+  id                     String                    @id @default(uuid())
+  name                   String
+  createdAt              DateTime                  @default(now())
+  updatedAt              DateTime                  @updatedAt
+  members                FamilyMember[]
+  invitations             FamilyInvitation[]
+  medicalRecordAccesses  MedicalRecordAccess[]
+  measurementAccesses    HealthMeasurementAccess[]
 }
 
 model FamilyMember {
   id        String     @id @default(uuid())
   userId    String
   familyId  String
-  createdAt DateTime   @default(now())
   role      FamilyRole @default(MEMBER)
+  createdAt DateTime   @default(now())
 
   family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -76,18 +68,120 @@ model FamilyInvitation {
   acceptedAt      DateTime?
   createdAt       DateTime  @default(now())
 
-  // [FamilyInvitation → Family]
-  // The invitation belongs to a specific family.
-  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
-
-  // [FamilyInvitation → User]
-  // Tracks which family owner created the invitation.
-  invitedBy User @relation(fields: [invitedByUserId], references: [id], onDelete: Cascade)
+  family    Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  invitedBy User   @relation(fields: [invitedByUserId], references: [id], onDelete: Cascade)
 
   @@index([familyId])
+}
+
+model MedicalRecord {
+  id               String                       @id @default(uuid())
+  userId           String
+  title            String
+  type             MedicalRecordType
+  description      String?
+  storageKey       String?
+  processingStatus MedicalRecordProcessingStatus @default(PENDING)
+  createdAt        DateTime                     @default(now())
+  updatedAt        DateTime                     @updatedAt
+
+  user     User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accesses MedicalRecordAccess[]
+
+  @@index([userId])
+  @@index([userId, createdAt])
+}
+
+model MedicalRecordAccess {
+  id              String                    @id @default(uuid())
+  medicalRecordId String
+  familyId        String
+  accessLevel     MedicalRecordAccessLevel  @default(VIEWER)
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+
+  medicalRecord MedicalRecord @relation(fields: [medicalRecordId], references: [id], onDelete: Cascade)
+  family        Family        @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@unique([medicalRecordId, familyId])
+  @@index([familyId])
+  @@index([medicalRecordId])
+}
+
+model HealthMeasurement {
+  id        String                 @id @default(uuid())
+  userId    String
+  type      HealthMeasurementType
+
+  value     Decimal?
+  unit      String?
+  systolic  Int?
+  diastolic Int?
+
+  context    String?
+  measuredAt DateTime
+  notes      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accesses HealthMeasurementAccess[]
+
+  @@index([userId, type])
+  @@index([userId, measuredAt])
+}
+
+model HealthMeasurementAccess {
+  id            String                    @id @default(uuid())
+  measurementId String
+  familyId      String
+  accessLevel   MedicalRecordAccessLevel  @default(VIEWER)
+  createdAt     DateTime                  @default(now())
+  updatedAt     DateTime                  @updatedAt
+
+  measurement HealthMeasurement @relation(fields: [measurementId], references: [id], onDelete: Cascade)
+  family      Family            @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@unique([measurementId, familyId])
+  @@index([familyId])
+  @@index([measurementId])
 }
 
 enum FamilyRole {
   OWNER
   MEMBER
+}
+
+enum MedicalRecordType {
+  PRESCRIPTION
+  BLOOD_REPORT
+  DISCHARGE_SUMMARY
+  XRAY
+  MRI
+  CT_SCAN
+  LAB_REPORT
+  OTHER
+}
+
+enum MedicalRecordProcessingStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum MedicalRecordAccessLevel {
+  OWNER
+  VIEWER
+}
+
+enum HealthMeasurementType {
+  BLOOD_SUGAR
+  BLOOD_PRESSURE
+  WEIGHT
+  TEMPERATURE
+  HEART_RATE
+  OXYGEN_SATURATION
+  OTHER
 }

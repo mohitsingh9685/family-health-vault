@@ -11,16 +11,18 @@
   --foreground: #171717;
 }
 
-@theme inline {
-  /* [Tailwind Theme]
-     Makes the global colors available to Tailwind. */
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+@layer components {
+  :root {
+    /* [Tailwind Theme]
+       Makes the global colors available to Tailwind. */
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
 
-  /* [Layout → Typography]
-     Uses the Geist fonts configured in src/app/layout.tsx. */
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+    /* [Layout → Typography]
+       Uses the Geist fonts configured in src/app/layout.tsx. */
+    --font-sans: var(--font-geist-sans);
+    --font-mono: var(--font-geist-mono);
+  }
 }
 
 body {
