@@ -3,9 +3,14 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
+import { getFamilyOverview } from "@/lib/dashboard/get-family-overview";
+
 import Sidebar from "@/components/dashboard/sidebar";
 import FamilyMembers from "@/components/dashboard/family-members";
-import ViewMedicalRecord from "@/components/dashboard/view-medical-record";
+
+import RecentMedicalRecordCard from "@/components/dashboard/recent-medical-record-card";
+import VitalCard from "@/components/dashboard/vital-card";
+import { getUserVitals } from "@/lib/dashboard/get-user-vitals";
 
 export default async function HomePage({
   searchParams,
@@ -109,24 +114,65 @@ export default async function HomePage({
   // Therefore every member of the same family sees the same
   // family members on their dashboard.
   // ------------------------------------------------------------
-  const familyMembers = await prisma.familyMember.findMany({
-    where: {
-      familyId: membership.familyId,
-    },
-
-    include: {
-      user: true,
-    },
-
-    orderBy: {
-      createdAt: "asc",
-    },
-  });
+  const familyOverview =
+ await getFamilyOverview(
+   membership.familyId
+ );
+ const userVitals =
+  await getUserVitals(userId);
   // [Home → Family Medical Records]
 // Fetch the latest records that have been explicitly shared
 // with the currently selected family.
+// ------------------------------------------------------------
+// [Home → Latest User Health Vitals]
+//
+// Health data belongs to USER, not FAMILY.
+// Therefore the same vitals appear when user switches families.
+// ------------------------------------------------------------
+
+const latestMeasurements =
+  await prisma.healthMeasurement.findMany({
+
+    where: {
+      userId,
+    },
+
+    orderBy: {
+      measuredAt: "desc",
+    },
+
+    take: 20,
+
+  });
+
+
+const latestVitals = {
+
+  bloodPressure:
+    latestMeasurements.find(
+      (item) => item.type === "BLOOD_PRESSURE"
+    ),
+
+  weight:
+    latestMeasurements.find(
+      (item) => item.type === "WEIGHT"
+    ),
+
+  bloodSugar:
+    latestMeasurements.find(
+      (item) => item.type === "BLOOD_SUGAR"
+    ),
+
+  oxygen:
+    latestMeasurements.find(
+      (item) => item.type === "OXYGEN_SATURATION"
+    ),
+
+};
+
 const recentMedicalRecords =
   await prisma.medicalRecord.findMany({
+    
     where: {
       uploadStatus: "UPLOADED",
 
@@ -219,6 +265,50 @@ const recentMedicalRecords =
               This section now changes automatically when the
               user switches families from /family.
               ------------------------------------------------------ */}
+
+<section className="mb-6 rounded-2xl border bg-white p-6 shadow-sm">
+
+<h2 className="text-lg font-semibold text-slate-900">
+  My Latest Vitals
+</h2>
+
+
+<div className="mt-5 grid grid-cols-4 gap-4">
+
+<VitalCard
+ title="Blood Pressure"
+ value={userVitals.bloodPressure}
+ unit="mmHg"
+ icon="❤️"
+/>
+
+
+<VitalCard
+ title="Weight"
+ value={userVitals.weight}
+ unit="kg"
+ icon="⚖️"
+/>
+
+
+<VitalCard
+ title="Blood Sugar"
+ value={userVitals.sugar}
+ unit="mg/dL"
+ icon="🩸"
+/>
+
+
+<VitalCard
+ title="SpO₂"
+ value={userVitals.spo2}
+ unit="%"
+ icon="🫁"
+/>
+
+</div>
+
+</section>
           <div className="mb-7 grid gap-6 lg:grid-cols-2">
             <section className="rounded-2xl border bg-white p-7 shadow-sm">
               <p className="text-sm font-medium uppercase tracking-wide text-teal-700">
@@ -230,8 +320,8 @@ const recentMedicalRecords =
               </h2>
 
               <p className="mt-2 text-slate-500">
-                {familyMembers.length}{" "}
-                {familyMembers.length === 1 ? "member" : "members"}
+               {familyOverview.length}{" "}
+{familyOverview.length === 1 ? "member" : "members"}
               </p>
 
               {/* [Dashboard → Family Switcher] */}
@@ -270,22 +360,23 @@ const recentMedicalRecords =
 
               These are members of the CURRENTLY SELECTED family.
               ------------------------------------------------------ */}
-          <FamilyMembers
-            members={familyMembers.map((member) => ({
-              id: member.id,
+         <FamilyMembers
+  members={familyOverview.map((member) => ({
+    id: member.id,
 
-              name:
-                member.user.email === session.user?.email
-                  ? currentUserName
-                  : member.user.email.split("@")[0],
+    userId: member.userId,
 
-              email: member.user.email,
+    name: member.name,
 
-              role: member.role,
+    email: member.email,
 
-              isCurrentUser: member.userId === userId,
-            }))}
-          />
+    role: member.role,
+
+    isCurrentUser: member.userId === userId,
+
+    vitals: member.vitals,
+  }))}
+/>
 
           {/* [Home → Recent Medical Records]
     Displays the latest records shared with the selected family. */}
@@ -321,26 +412,32 @@ const recentMedicalRecords =
     </div>
   ) : (
     <div className="divide-y">
-     {recentMedicalRecords.map((record) => (
-  <div
+    {recentMedicalRecords.map((record) => (
+
+  <RecentMedicalRecordCard
     key={record.id}
-    className="flex items-center justify-between gap-4 py-4"
-  >
-    <div>
-      <p className="font-medium text-slate-900">
-        {record.title}
-      </p>
 
-      <p className="mt-1 text-sm text-slate-500">
-        {record.type.replaceAll("_", " ")}
-        {" · "}
-        {record.user.profile?.name ||
-          record.user.email.split("@")[0]}
-      </p>
-    </div>
+    // Database medical record id
+    recordId={record.id}
 
-    <ViewMedicalRecord recordId={record.id} />
-  </div>
+    // Report title
+    title={record.title}
+
+    // Report type
+    type={record.type}
+
+    // User who uploaded the report
+    userName={
+      record.user.profile?.name ||
+      record.user.email.split("@")[0]
+    }
+
+    // Upload date
+    createdAt={
+      record.createdAt.toLocaleDateString()
+    }
+  />
+
 ))}
     </div>
   )}

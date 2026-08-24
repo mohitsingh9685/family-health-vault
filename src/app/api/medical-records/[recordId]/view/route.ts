@@ -73,11 +73,13 @@ export async function GET(
 
     // [API → S3]
     // Generate a temporary URL without exposing AWS credentials.
-    const viewUrl = await createDownloadUrl(record.storageKey);
+    // [API → S3]
+// Generate a temporary URL without exposing AWS credentials.
+const viewUrl = await createDownloadUrl(record.storageKey);
 
-    return NextResponse.json({
-      viewUrl,
-    });
+// Redirect browser directly to S3 PDF URL.
+// Browser will open PDF instead of displaying JSON.
+return NextResponse.redirect(viewUrl);
   } catch (error) {
     console.error("Failed to create medical record view URL:", error);
 
