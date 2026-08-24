@@ -81,6 +81,10 @@ model MedicalRecord {
   type             MedicalRecordType
   description      String?
   storageKey       String?
+  fileName         String?
+  mimeType         String?
+  fileSize         Int?
+  uploadStatus MedicalRecordUploadStatus @default(PENDING)
   processingStatus MedicalRecordProcessingStatus @default(PENDING)
   createdAt        DateTime                     @default(now())
   updatedAt        DateTime                     @updatedAt
@@ -184,4 +188,10 @@ enum HealthMeasurementType {
   HEART_RATE
   OXYGEN_SATURATION
   OTHER
+}
+
+enum MedicalRecordUploadStatus {
+  PENDING
+  UPLOADED
+  FAILED
 }
