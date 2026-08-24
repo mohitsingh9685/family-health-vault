@@ -8,6 +8,7 @@
 // This file must remain server-only because it uses AWS credentials.
 
 import {
+   GetObjectCommand,
   HeadObjectCommand,
   PutObjectCommand,
   S3Client,
@@ -112,4 +113,17 @@ export async function verifyObjectExists(key: string) {
     // so it can be handled and logged appropriately.
     throw error;
   }
+}
+
+// Relation: Download API → this utility → AWS S3.
+// Generates a short-lived URL for viewing/downloading a private medical file.
+export async function createDownloadUrl(key: string) {
+  const command = new GetObjectCommand({
+    Bucket: bucketName,
+    Key: key,
+  });
+
+  return getSignedUrl(s3Client, command, {
+    expiresIn: 300,
+  });
 }

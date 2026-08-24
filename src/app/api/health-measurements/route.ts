@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import {
+  AuthorizationError,
+  requireFamilyMember,
+} from "@/lib/auth/authorization";
 import { createHealthMeasurementSchema } from "@/lib/validation/health-measurement";
 
 export async function POST(request: Request) {
@@ -17,7 +21,9 @@ export async function POST(request: Request) {
 
     const body = await request.json();
 
-    const result = createHealthMeasurementSchema.safeParse(body);
+const { familyId, ...measurementBody } = body;
+
+const result = createHealthMeasurementSchema.safeParse(measurementBody);
 
     if (!result.success) {
       return NextResponse.json(
@@ -30,21 +36,43 @@ export async function POST(request: Request) {
     }
 
     const data = result.data;
+    try {
+  await requireFamilyMember(session.user.id, familyId);
+} catch (error) {
+  if (error instanceof AuthorizationError) {
+    return NextResponse.json(
+      { error: "Forbidden" },
+      { status: 403 }
+    );
+  }
 
-    const measurement = await prisma.healthMeasurement.create({
-      data: {
-        userId: session.user.id,
-        type: data.type,
-        value: data.value,
-        unit: data.unit,
-        systolic: data.systolic,
-        diastolic: data.diastolic,
-        context: data.context,
-        measuredAt: data.measuredAt,
-        notes: data.notes,
+  throw error;
+}
+
+    // [Health Measurement → Prisma]
+// Store the measurement and its family access together.
+const measurement = await prisma.healthMeasurement.create({
+  data: {
+    userId: session.user.id,
+    type: data.type,
+    value: data.value,
+    unit: data.unit,
+    systolic: data.systolic,
+    diastolic: data.diastolic,
+    context: data.context,
+    measuredAt: data.measuredAt,
+    notes: data.notes,
+
+    // [HealthMeasurement → HealthMeasurementAccess]
+    // Allow the selected family to view this measurement.
+    accesses: {
+      create: {
+        familyId,
+        accessLevel: "VIEWER",
       },
-    });
-
+    },
+  },
+});
     return NextResponse.json(
       { measurement },
       { status: 201 }

@@ -121,19 +121,35 @@ export async function POST(request: Request) {
 
     // [Upload API → Prisma]
     // Create the database record before returning the upload URL.
-    const medicalRecord = await prisma.medicalRecord.create({
-      data: {
-        id: medicalRecordId,
-        userId: session.user.id,
-        title: medicalRecordResult.data.title,
-        type: medicalRecordResult.data.type,
-        description: medicalRecordResult.data.description,
-        storageKey,
-        fileName: fileName.trim(),
-        mimeType: contentType,
-        fileSize,
+    // [Upload API → Prisma]
+// Create the medical record and immediately grant the current
+// family access to that record.
+//
+// MedicalRecord stores ownership.
+// MedicalRecordAccess controls which family can view it.
+const medicalRecord = await prisma.medicalRecord.create({
+  data: {
+    id: medicalRecordId,
+    userId: session.user.id,
+    title: medicalRecordResult.data.title,
+    type: medicalRecordResult.data.type,
+    description: medicalRecordResult.data.description,
+    storageKey,
+    fileName: fileName.trim(),
+    mimeType: contentType,
+    fileSize,
+
+    // [MedicalRecord → Family Access]
+    // The family that the user selected while uploading
+    // receives VIEWER access to this record.
+    accesses: {
+      create: {
+        familyId,
+        accessLevel: "VIEWER",
       },
-    });
+    },
+  },
+});
 
     // [Upload API → S3 Utility]
     // Generate a short-lived URL for direct browser-to-S3 upload.

@@ -24,9 +24,13 @@ const navigation = [
 
 type SidebarProps = {
   userName: string;
+  familyId: string;
 };
 
-export default function Sidebar({ userName }: SidebarProps) {
+export default function Sidebar({
+  userName,
+  familyId,
+}: SidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -65,7 +69,7 @@ export default function Sidebar({ userName }: SidebarProps) {
         })}
       </nav>
 
-      {/* Profile entry points to the future /profile page */}
+      {/* Profile entry point */}
       <div className="border-t p-5">
         <Link
           href="/profile"
@@ -80,10 +84,15 @@ export default function Sidebar({ userName }: SidebarProps) {
               {userName}
             </p>
 
-            <p className="text-xs text-slate-500">View profile</p>
+            <p className="text-xs text-slate-500">
+              View profile
+            </p>
           </div>
 
-          <UserCircle className="ml-auto text-slate-400" size={18} />
+          <UserCircle
+            className="ml-auto text-slate-400"
+            size={18}
+          />
         </Link>
       </div>
     </aside>

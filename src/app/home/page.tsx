@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 
 import Sidebar from "@/components/dashboard/sidebar";
 import FamilyMembers from "@/components/dashboard/family-members";
+import ViewMedicalRecord from "@/components/dashboard/view-medical-record";
 
 export default async function HomePage({
   searchParams,
@@ -121,6 +122,56 @@ export default async function HomePage({
       createdAt: "asc",
     },
   });
+  // [Home → Family Medical Records]
+// Fetch the latest records that have been explicitly shared
+// with the currently selected family.
+const recentMedicalRecords =
+  await prisma.medicalRecord.findMany({
+    where: {
+      uploadStatus: "UPLOADED",
+
+      // [Medical Record Ownership → Home]
+      // A user's own medical records are visible to them
+      // in every family they belong to.
+      OR: [
+        {
+          userId,
+        },
+
+        // [Family Access → Home]
+        // Other family members can see a record only when
+        // that record has been explicitly shared with this family.
+        {
+          accesses: {
+            some: {
+              familyId: membership.familyId,
+            },
+          },
+        },
+      ],
+    },
+    select: {
+      id: true,
+      title: true,
+      type: true,
+      createdAt: true,
+      user: {
+        select: {
+          id: true,
+          email: true,
+          profile: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    take: 5,
+  });
 
   // ------------------------------------------------------------
   // [Auth.js → Dashboard Greeting]
@@ -140,7 +191,10 @@ export default async function HomePage({
 
           Sidebar navigation is shared across the dashboard.
           -------------------------------------------------------- */}
-      <Sidebar userName={currentUserName} />
+     <Sidebar
+  userName={currentUserName}
+  familyId={membership.familyId}
+/>
 
       {/* --------------------------------------------------------
           [Dashboard → Main Workspace]
@@ -232,6 +286,65 @@ export default async function HomePage({
               isCurrentUser: member.userId === userId,
             }))}
           />
+
+          {/* [Home → Recent Medical Records]
+    Displays the latest records shared with the selected family. */}
+<section className="mt-6 rounded-2xl border bg-white p-6 shadow-sm">
+  <div className="mb-5 flex items-center justify-between">
+    <div>
+      <h2 className="text-lg font-semibold text-slate-900">
+        Recent Medical Records
+      </h2>
+
+      <p className="mt-1 text-sm text-slate-500">
+        Latest medical documents shared with your family.
+      </p>
+    </div>
+
+    <a
+      href="/medical-record"
+      className="text-sm font-medium text-teal-700 hover:text-teal-800"
+    >
+      View all
+    </a>
+  </div>
+
+  {recentMedicalRecords.length === 0 ? (
+    <div className="rounded-xl border border-dashed p-6 text-center">
+      <p className="font-medium text-slate-700">
+        No medical records yet
+      </p>
+
+      <p className="mt-1 text-sm text-slate-500">
+        Upload a medical document to see it here.
+      </p>
+    </div>
+  ) : (
+    <div className="divide-y">
+     {recentMedicalRecords.map((record) => (
+  <div
+    key={record.id}
+    className="flex items-center justify-between gap-4 py-4"
+  >
+    <div>
+      <p className="font-medium text-slate-900">
+        {record.title}
+      </p>
+
+      <p className="mt-1 text-sm text-slate-500">
+        {record.type.replaceAll("_", " ")}
+        {" · "}
+        {record.user.profile?.name ||
+          record.user.email.split("@")[0]}
+      </p>
+    </div>
+
+    <ViewMedicalRecord recordId={record.id} />
+  </div>
+))}
+    </div>
+  )}
+</section>
         </div>
       </main>
     </div>
