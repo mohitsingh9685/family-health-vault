@@ -19,6 +19,10 @@ model User {
   familyInvitations  FamilyInvitation[]
   medicalRecords     MedicalRecord[]
   healthMeasurements HealthMeasurement[]
+
+  // New appointment relations
+  createdAppointments Appointment[] @relation("CreatedAppointments")
+  patientAppointments Appointment[] @relation("PatientAppointments")
 }
 
 model Profile {
@@ -194,4 +198,42 @@ enum MedicalRecordUploadStatus {
   PENDING
   UPLOADED
   FAILED
+}
+
+// ============================================================
+// Appointment Management
+// User can create appointments for themselves or another
+// family member. Status controls whether it appears as upcoming.
+// ============================================================
+
+model Appointment {
+  id String @id @default(uuid())
+
+  // [Appointment → Creator]
+  // User who created this appointment.
+  createdById String
+  createdBy User @relation("CreatedAppointments", fields: [createdById], references: [id])
+
+  // [Appointment → Patient]
+  // User who will attend the appointment.
+  patientId String
+  patient User @relation("PatientAppointments", fields: [patientId], references: [id])
+
+  hospitalName String
+  hospitalAddress String?
+  doctorName String?
+
+  appointmentDate DateTime
+
+  // [Appointment → Status]
+  // VISITED appointments are excluded from Home → Upcoming Appointments.
+  status AppointmentStatus @default(UPCOMING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum AppointmentStatus {
+  UPCOMING
+  VISITED
 }

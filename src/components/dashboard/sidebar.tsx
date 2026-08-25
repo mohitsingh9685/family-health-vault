@@ -6,19 +6,33 @@ import {
   Home,
   Users,
   FileText,
+  CalendarDays,
   Settings,
   UserCircle,
 } from "lucide-react";
 
 // Dashboard navigation used by /home and future application pages.
+// Dashboard navigation shared across the application.
+// Each item maps directly to an application route.
 const navigation = [
   { name: "Home", href: "/home", icon: Home },
+
   { name: "Family", href: "/family", icon: Users },
+
   {
     name: "Medical Records",
     href: "/medical-record",
     icon: FileText,
   },
+
+  // [Sidebar → Appointment Management]
+  // Opens the dedicated appointment management page.
+  {
+    name: "Appointments",
+    href: "/appointments",
+    icon: CalendarDays,
+  },
+
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 

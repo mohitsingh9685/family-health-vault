@@ -12,6 +12,9 @@ import RecentMedicalRecordCard from "@/components/dashboard/recent-medical-recor
 import VitalCard from "@/components/dashboard/vital-card";
 import { getUserVitals } from "@/lib/dashboard/get-user-vitals";
 
+import { getUpcomingAppointments } from "@/lib/appointments";
+import UpcomingAppointments from "@/components/dashboard/upcoming-appointments";
+
 export default async function HomePage({
   searchParams,
 }: {
@@ -118,6 +121,16 @@ export default async function HomePage({
  await getFamilyOverview(
    membership.familyId
  );
+
+ // [Home → Upcoming Appointments]
+// Reuse the shared appointment data layer.
+// familyOverview already contains all members of the selected family.
+const upcomingAppointments =
+  await getUpcomingAppointments(
+    familyOverview.map((member) => member.userId),
+  );
+
+
  const userVitals =
   await getUserVitals(userId);
   // [Home → Family Medical Records]
@@ -130,45 +143,45 @@ export default async function HomePage({
 // Therefore the same vitals appear when user switches families.
 // ------------------------------------------------------------
 
-const latestMeasurements =
-  await prisma.healthMeasurement.findMany({
+// const latestMeasurements =
+//   await prisma.healthMeasurement.findMany({
 
-    where: {
-      userId,
-    },
+//     where: {
+//       userId,
+//     },
 
-    orderBy: {
-      measuredAt: "desc",
-    },
+//     orderBy: {
+//       measuredAt: "desc",
+//     },
 
-    take: 20,
+//     take: 20,
 
-  });
+//   });
 
 
-const latestVitals = {
+// const latestVitals = {
 
-  bloodPressure:
-    latestMeasurements.find(
-      (item) => item.type === "BLOOD_PRESSURE"
-    ),
+//   bloodPressure:
+//     latestMeasurements.find(
+//       (item) => item.type === "BLOOD_PRESSURE"
+//     ),
 
-  weight:
-    latestMeasurements.find(
-      (item) => item.type === "WEIGHT"
-    ),
+//   weight:
+//     latestMeasurements.find(
+//       (item) => item.type === "WEIGHT"
+//     ),
 
-  bloodSugar:
-    latestMeasurements.find(
-      (item) => item.type === "BLOOD_SUGAR"
-    ),
+//   bloodSugar:
+//     latestMeasurements.find(
+//       (item) => item.type === "BLOOD_SUGAR"
+//     ),
 
-  oxygen:
-    latestMeasurements.find(
-      (item) => item.type === "OXYGEN_SATURATION"
-    ),
+//   oxygen:
+//     latestMeasurements.find(
+//       (item) => item.type === "OXYGEN_SATURATION"
+//     ),
 
-};
+// };
 
 const recentMedicalRecords =
   await prisma.medicalRecord.findMany({
@@ -442,6 +455,11 @@ const recentMedicalRecords =
     </div>
   )}
 </section>
+
+{/* [Home → Upcoming Appointments] */}
+<UpcomingAppointments
+  appointments={upcomingAppointments}
+/>
         </div>
       </main>
     </div>
