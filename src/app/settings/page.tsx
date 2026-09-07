@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { FileLock2, UsersRound } from "lucide-react";
 
 import { auth } from "@/auth";
+import Sidebar from "@/components/dashboard/sidebar";
 import AccountSettings from "@/components/settings/account-settings";
 import ProfileSettingsForm from "@/components/settings/profile-settings-form";
 import SecuritySettingsForm from "@/components/settings/security-settings-form";
@@ -45,6 +46,7 @@ export default async function SettingsPage({
 }: {
   searchParams: Promise<{
     section?: string;
+    familyId?: string;
   }>;
 }) {
   const session = await auth();
@@ -53,7 +55,7 @@ export default async function SettingsPage({
     redirect("/signin");
   }
 
-  const { section } = await searchParams;
+  const { section, familyId } = await searchParams;
   const activeSection: SettingsSection = validSections.includes(
     section as SettingsSection,
   )
@@ -82,6 +84,11 @@ export default async function SettingsPage({
             select: {
               id: true,
               name: true,
+              _count: {
+                select: {
+                  members: true,
+                },
+              },
             },
           },
         },
@@ -100,9 +107,31 @@ export default async function SettingsPage({
   const ownedFamilies = user.familyMemberships
     .filter((membership) => membership.role === "OWNER")
     .map((membership) => membership.family);
+  const selectedMembership = familyId
+    ? user.familyMemberships.find(
+        (membership) => membership.family.id === familyId,
+      )
+    : user.familyMemberships[0];
+
+  if (familyId && !selectedMembership && user.familyMemberships.length > 0) {
+    redirect(
+      `/settings?familyId=${encodeURIComponent(user.familyMemberships[0].family.id)}&section=${activeSection}`,
+    );
+  }
 
   return (
-    <div className="min-h-[calc(100vh-73px)] bg-slate-50 px-4 py-8 sm:px-6 lg:py-10">
+    <div className="flex min-h-screen bg-slate-50">
+      {selectedMembership && (
+        <Sidebar
+          familyId={selectedMembership.family.id}
+          familyName={selectedMembership.family.name}
+          familyRole={selectedMembership.role}
+          memberCount={selectedMembership.family._count.members}
+        />
+      )}
+
+      <div className="min-w-0 flex-1">
+        <div className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:py-10">
       <div className="mx-auto max-w-6xl">
         <div className="mb-8">
           <p className="text-sm font-semibold uppercase tracking-wide text-teal-700">
@@ -118,7 +147,10 @@ export default async function SettingsPage({
 
         <div className="grid gap-6 lg:grid-cols-[250px_minmax(0,1fr)]">
           <aside className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm lg:self-start">
-            <SettingsNavigation activeSection={activeSection} />
+            <SettingsNavigation
+              activeSection={activeSection}
+              familyId={selectedMembership?.family.id}
+            />
           </aside>
 
           <main className="min-w-0 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
@@ -252,6 +284,8 @@ export default async function SettingsPage({
               />
             )}
           </main>
+        </div>
+          </div>
         </div>
       </div>
     </div>

@@ -14,6 +14,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function getFamilyOverview(
   familyId: string,
+  viewerUserId: string,
 ) {
   const members = await prisma.familyMember.findMany({
     where: {
@@ -32,11 +33,34 @@ export async function getFamilyOverview(
           },
 
           healthMeasurements: {
+            where: {
+              type: {
+                in: [
+                  "BLOOD_PRESSURE",
+                  "WEIGHT",
+                  "BLOOD_SUGAR",
+                  "OXYGEN_SATURATION",
+                ],
+              },
+              OR: [
+                {
+                  userId: viewerUserId,
+                },
+                {
+                  accesses: {
+                    some: {
+                      familyId,
+                    },
+                  },
+                },
+              ],
+            },
+
             orderBy: {
               measuredAt: "desc",
             },
 
-            take: 10,
+            take: 20,
           },
         },
       },
@@ -95,6 +119,7 @@ export async function getFamilyOverview(
 
       role: member.role,
 
+      lastUpdatedAt: measurements[0]?.measuredAt ?? null,
 
       vitals: {
         bloodPressure: latestBP

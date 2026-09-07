@@ -1,10 +1,9 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
-
+import Sidebar from "@/components/dashboard/sidebar";
 import VitalCard from "@/components/dashboard/vital-card";
-
+import { prisma } from "@/lib/prisma";
 
 export default async function FamilyMemberPage({
   params,
@@ -13,314 +12,185 @@ export default async function FamilyMemberPage({
     memberId: string;
   }>;
 }) {
-
-  // Auth.js → Only logged-in users
   const session = await auth();
-
 
   if (!session?.user?.id) {
     redirect("/signin");
   }
 
-
   const { memberId } = await params;
-
-  console.log(
- "Opening family member:",
- memberId
-);
-
-
-  /*
-    Family Member Detail
-
-    memberId is the FamilyMember id.
-
-    We first find the actual user connected
-    to that family membership.
-  */
-
- const familyMember =
-await prisma.familyMember.findFirst({
-  where:{
-    id: memberId,
-
-    // Security:
-    // Only allow members from families
-    // where current user belongs.
-    family:{
-      members:{
-        some:{
-          userId: session.user.id,
+  const familyMember = await prisma.familyMember.findFirst({
+    where: {
+      id: memberId,
+      family: {
+        members: {
+          some: {
+            userId: session.user.id,
+          },
         },
       },
     },
-  },
-
-      include:{
-        family:true,
-        user:{
-          select:{
-            id:true,
-            email:true,
-
-            profile:{
-              select:{
-                name:true,
-              },
-            },
-
-            healthMeasurements:{
-              orderBy:{
-                measuredAt:"desc",
-              },
-
-              take:10,
-            },
-
-            medicalRecords:{
-              where:{
-                uploadStatus:"UPLOADED",
-              },
-
-              orderBy:{
-                createdAt:"desc",
-              },
-
-              take:5,
+    select: {
+      userId: true,
+      role: true,
+      user: {
+        select: {
+          email: true,
+          profile: {
+            select: {
+              name: true,
             },
           },
         },
       },
-    });
+      family: {
+        select: {
+          id: true,
+          name: true,
+          _count: {
+            select: {
+              members: true,
+            },
+          },
+          members: {
+            where: {
+              userId: session.user.id,
+            },
+            select: {
+              role: true,
+            },
+            take: 1,
+          },
+        },
+      },
+    },
+  });
 
-
-
-  if(!familyMember){
-    redirect("/home");
+  if (!familyMember) {
+    notFound();
   }
 
+  const isViewingOwnData = familyMember.userId === session.user.id;
+  const measurements = await prisma.healthMeasurement.findMany({
+    where: {
+      userId: familyMember.userId,
+      ...(isViewingOwnData
+        ? {}
+        : {
+            accesses: {
+              some: {
+                familyId: familyMember.family.id,
+              },
+            },
+          }),
+    },
+    select: {
+      type: true,
+      value: true,
+      systolic: true,
+      diastolic: true,
+      measuredAt: true,
+    },
+    orderBy: {
+      measuredAt: "desc",
+    },
+    take: 20,
+  });
 
-
-  const measurements =
-    familyMember.user.healthMeasurements;
-
-
-
-  const bp =
-    measurements.find(
-      (m)=>m.type==="BLOOD_PRESSURE"
-    );
-
-
-  const weight =
-    measurements.find(
-      (m)=>m.type==="WEIGHT"
-    );
-
-
-  const sugar =
-    measurements.find(
-      (m)=>m.type==="BLOOD_SUGAR"
-    );
-
-
-  const spo2 =
-    measurements.find(
-      (m)=>m.type==="OXYGEN_SATURATION"
-    );
-
-
-
+  const bloodPressure = measurements.find(
+    (measurement) => measurement.type === "BLOOD_PRESSURE",
+  );
+  const weight = measurements.find(
+    (measurement) => measurement.type === "WEIGHT",
+  );
+  const bloodSugar = measurements.find(
+    (measurement) => measurement.type === "BLOOD_SUGAR",
+  );
+  const oxygen = measurements.find(
+    (measurement) => measurement.type === "OXYGEN_SATURATION",
+  );
   const memberName =
     familyMember.user.profile?.name ||
     familyMember.user.email.split("@")[0];
-
-
+  const viewerRole = familyMember.family.members[0]?.role ?? "MEMBER";
 
   return (
+    <div className="flex min-h-screen bg-slate-50 text-slate-950">
+      <Sidebar
+        familyId={familyMember.family.id}
+        familyName={familyMember.family.name}
+        familyRole={viewerRole}
+        memberCount={familyMember.family._count.members}
+      />
 
-    <main className="min-h-screen bg-slate-50 px-8 py-10">
-
-
-      {/* Member Header */}
-
-      {/* Family Member Profile Header */}
-
-<section className="rounded-2xl border bg-white p-6 shadow-sm">
-
-  <h1 className="text-3xl font-bold text-slate-900">
-    {memberName}
-  </h1>
-
-  <p className="mt-2 text-slate-500">
-    Family Health Profile
-  </p>
-
-  <div className="mt-5 grid gap-4 md:grid-cols-3">
-
-    <div>
-      <p className="text-sm text-slate-500">
-        Email
-      </p>
-
-      <p className="font-medium">
-        {familyMember.user.email}
-      </p>
-    </div>
-
-
-    <div>
-      <p className="text-sm text-slate-500">
-        Role
-      </p>
-
-      <p className="font-medium">
-        {familyMember.role}
-      </p>
-    </div>
-
-
-    <div>
-      <p className="text-sm text-slate-500">
-        Family
-      </p>
-
-      <p className="font-medium">
-        {familyMember.family.name}
-      </p>
-    </div>
-
-  </div>
-
-</section>
-
-
-      {/* Latest Vitals */}
-
-      <section className="mt-6">
-
-        <h2 className="mb-4 text-xl font-semibold">
-          Latest Health Data
-        </h2>
-
-
-        <div className="grid gap-4 md:grid-cols-4">
-
-
-          <VitalCard
-            title="Blood Pressure"
-            value={
-              bp
-              ? `${bp.systolic}/${bp.diastolic}`
-              : "--"
-            }
-            unit="mmHg"
-            icon="❤️"
-          />
-
-
-          <VitalCard
-            title="Weight"
-            value={
-              weight?.value?.toString() || "--"
-            }
-            unit="kg"
-            icon="⚖️"
-          />
-
-
-          <VitalCard
-            title="Sugar"
-            value={
-              sugar?.value?.toString() || "--"
-            }
-            unit="mg/dL"
-            icon="🩸"
-          />
-
-
-          <VitalCard
-            title="SpO₂"
-            value={
-              spo2?.value?.toString() || "--"
-            }
-            unit="%"
-            icon="🫁"
-          />
-
-        </div>
-
-      </section>
-
-
-
-
-      {/* Medical Records */}
-
-      <section className="mt-8 rounded-2xl border bg-white p-6 shadow-sm">
-
-        <h2 className="text-xl font-semibold">
-          Medical Records
-        </h2>
-
-
-        <div className="mt-5 space-y-3">
-
-
-        {
-          familyMember.user.medicalRecords.length === 0
-          ?
-          (
-            <p className="text-slate-500">
-              No medical records available.
+      <div className="min-w-0 flex-1 px-6 py-10">
+        <div className="mx-auto max-w-6xl">
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">
+              {familyMember.family.name}
             </p>
-          )
+            <h1 className="mt-2 text-3xl font-bold text-slate-900">
+              {memberName}
+            </h1>
+            <p className="mt-2 text-slate-500">Family health profile</p>
 
-          :
+            <div className="mt-5 grid gap-4 md:grid-cols-3">
+              <div>
+                <p className="text-sm text-slate-500">Email</p>
+                <p className="font-medium">{familyMember.user.email}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Role</p>
+                <p className="font-medium">{familyMember.role}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Data visibility</p>
+                <p className="font-medium">
+                  {isViewingOwnData ? "Your measurements" : "Shared with this family"}
+                </p>
+              </div>
+            </div>
+          </section>
 
-          familyMember.user.medicalRecords.map(
-            (record)=>(
-             <div
-  key={record.id}
-  className="flex items-center justify-between rounded-xl border p-4"
->
+          <section className="mt-6">
+            <h2 className="mb-2 text-xl font-semibold">Latest health data</h2>
+            <p className="mb-4 text-sm text-slate-500">
+              Other members&apos; values appear only when explicitly shared with this family.
+            </p>
 
-  <div>
-
-    <p className="font-medium text-slate-900">
-      {record.title}
-    </p>
-
-    <p className="text-sm text-slate-500">
-      {record.type.replaceAll("_", " ")}
-    </p>
-
-  </div>
-
-
-  <a
-    href={`/api/medical-records/${record.id}/view`}
-    target="_blank"
-    className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white"
-  >
-    View
-  </a>
-
-</div>
-            )
-          )
-        }
-
-
+            <div className="grid gap-4 md:grid-cols-4">
+              <VitalCard
+                title="Blood Pressure"
+                value={
+                  bloodPressure
+                    ? `${bloodPressure.systolic}/${bloodPressure.diastolic}`
+                    : "--"
+                }
+                unit="mmHg"
+                icon="❤️"
+              />
+              <VitalCard
+                title="Weight"
+                value={weight?.value?.toString() || "--"}
+                unit="kg"
+                icon="⚖️"
+              />
+              <VitalCard
+                title="Sugar"
+                value={bloodSugar?.value?.toString() || "--"}
+                unit="mg/dL"
+                icon="🩸"
+              />
+              <VitalCard
+                title="SpO₂"
+                value={oxygen?.value?.toString() || "--"}
+                unit="%"
+                icon="🫁"
+              />
+            </div>
+          </section>
         </div>
-
-
-      </section>
-
-
-
-    </main>
-
+      </div>
+    </div>
   );
 }

@@ -16,6 +16,7 @@ type AppointmentFormProps = {
   // Current logged-in user is always available as a patient option.
   currentUserId: string;
   currentUserName: string;
+  onCreated?: () => void;
 };
 
 export default function AppointmentForm({
@@ -23,6 +24,7 @@ export default function AppointmentForm({
   familyMembers,
   currentUserId,
   currentUserName,
+  onCreated,
 }: AppointmentFormProps) {
   // ------------------------------------------------------------
   // [Appointment Form → Local Form State]
@@ -94,7 +96,7 @@ export default function AppointmentForm({
     setAppointmentDate("");
     setAppointmentTime("");
 
-    alert("Appointment added successfully.");
+    onCreated?.();
   } catch (error) {
     console.error(
       "Appointment creation failed:",
