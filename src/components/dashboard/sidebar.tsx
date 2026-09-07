@@ -8,7 +8,6 @@ import {
   FileText,
   CalendarDays,
   Settings,
-  UserCircle,
 } from "lucide-react";
 
 // Dashboard navigation used by /home and future application pages.
@@ -37,12 +36,10 @@ const navigation = [
 ];
 
 type SidebarProps = {
-  userName: string;
   familyId: string;
 };
 
 export default function Sidebar({
-  userName,
   familyId,
 }: SidebarProps) {
   const pathname = usePathname();
@@ -65,11 +62,15 @@ export default function Sidebar({
         {navigation.map((item) => {
           const Icon = item.icon;
           const active = pathname === item.href;
+          const href =
+            item.href === "/home" || item.href === "/appointments"
+              ? `${item.href}?familyId=${encodeURIComponent(familyId)}`
+              : item.href;
 
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={href}
               className={`flex items-center gap-4 rounded-xl px-4 py-3 text-sm font-medium transition ${
                 active
                   ? "bg-teal-50 text-teal-700"
@@ -83,32 +84,6 @@ export default function Sidebar({
         })}
       </nav>
 
-      {/* Profile entry point */}
-      <div className="border-t p-5">
-        <Link
-          href="/profile"
-          className="flex items-center gap-3 rounded-xl p-2 hover:bg-slate-50"
-        >
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-teal-100 font-semibold text-teal-700">
-            {userName.charAt(0).toUpperCase()}
-          </div>
-
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-slate-900">
-              {userName}
-            </p>
-
-            <p className="text-xs text-slate-500">
-              View profile
-            </p>
-          </div>
-
-          <UserCircle
-            className="ml-auto text-slate-400"
-            size={18}
-          />
-        </Link>
-      </div>
     </aside>
   );
 }

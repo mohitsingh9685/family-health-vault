@@ -8,8 +8,9 @@ type AppointmentPatient = {
 };
 
 type AppointmentFormProps = {
-  // [Home/Family → Appointment Form]
-  // Family members are provided by the server component.
+  // [Family → Appointment Form]
+  // The server has already verified this selected family.
+  familyId: string;
   familyMembers: AppointmentPatient[];
 
   // Current logged-in user is always available as a patient option.
@@ -18,6 +19,7 @@ type AppointmentFormProps = {
 };
 
 export default function AppointmentForm({
+  familyId,
   familyMembers,
   currentUserId,
   currentUserName,
@@ -45,6 +47,19 @@ export default function AppointmentForm({
   setIsSubmitting(true);
 
   try {
+    // Date inputs have no timezone. Construct the Date in the browser so it
+    // uses the user's local timezone, then send one absolute ISO instant.
+    const localAppointmentDateTime = new Date(
+      `${appointmentDate}T${appointmentTime}`,
+    );
+
+    if (Number.isNaN(localAppointmentDateTime.getTime())) {
+      throw new Error("Invalid appointment date or time");
+    }
+
+    const timeZone =
+      Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+
     // [Appointment Form → API]
     // Send validated form data to the server.
     const response = await fetch("/api/appointments", {
@@ -53,12 +68,13 @@ export default function AppointmentForm({
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        familyId,
         hospitalName,
         patientId,
         hospitalAddress,
         doctorName,
-        appointmentDate,
-        appointmentTime,
+        appointmentDateTime: localAppointmentDateTime.toISOString(),
+        timeZone,
       }),
     });
 

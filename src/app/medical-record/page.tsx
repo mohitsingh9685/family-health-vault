@@ -44,7 +44,6 @@ export default async function MedicalRecordRoute() {
     <div className="flex min-h-screen bg-slate-50">
       {/* [Dashboard → Sidebar] */}
       <Sidebar
-        userName={currentUserName}
         familyId={membership.familyId}
       />
 

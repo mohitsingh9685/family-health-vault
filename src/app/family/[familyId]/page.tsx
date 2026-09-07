@@ -132,6 +132,7 @@ export default async function FamilyPage({
                 <MemberActions
                   familyId={family.id}
                   memberId={member.id}
+                  memberLabel={member.user.email}
                   isOwner={isOwner}
                   isCurrentUser={
                     member.user.id === session.user.id

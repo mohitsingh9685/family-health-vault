@@ -1,9 +1,15 @@
+import {
+  formatAppointmentDate,
+  formatAppointmentTime,
+} from "@/lib/appointments";
+
 type UpcomingAppointment = {
   id: string;
   hospitalName: string;
   doctorName: string | null;
   hospitalAddress: string | null;
   appointmentDate: Date;
+  timeZone: string;
 
   patient: {
     email: string;
@@ -15,10 +21,12 @@ type UpcomingAppointment = {
 
 type UpcomingAppointmentsProps = {
   appointments: UpcomingAppointment[];
+  familyId: string;
 };
 
 export default function UpcomingAppointments({
   appointments,
+  familyId,
 }: UpcomingAppointmentsProps) {
   return (
     <section className="mt-6 rounded-2xl border bg-white p-6 shadow-sm">
@@ -39,7 +47,7 @@ export default function UpcomingAppointments({
         {/* [Dashboard → Appointment Navigation]
             Opens the complete appointment management page. */}
         <a
-          href="/appointments"
+          href={`/appointments?familyId=${encodeURIComponent(familyId)}`}
           className="text-sm font-medium text-teal-700 hover:text-teal-800"
         >
           View all
@@ -90,14 +98,17 @@ export default function UpcomingAppointments({
                 {/* Appointment date and time */}
                 <div className="shrink-0 text-right">
                   <p className="text-sm font-medium text-teal-700">
-                    {appointment.appointmentDate.toLocaleDateString()}
+                    {formatAppointmentDate(
+                      appointment.appointmentDate,
+                      appointment.timeZone,
+                    )}
                   </p>
 
                   <p className="text-sm text-slate-500">
-                    {appointment.appointmentDate.toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {formatAppointmentTime(
+                      appointment.appointmentDate,
+                      appointment.timeZone,
+                    )}
                   </p>
                 </div>
               </div>

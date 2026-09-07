@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
@@ -127,7 +128,7 @@ export default async function HomePage({
 // familyOverview already contains all members of the selected family.
 const upcomingAppointments =
   await getUpcomingAppointments(
-    familyOverview.map((member) => member.userId),
+    membership.familyId,
   );
 
 
@@ -251,7 +252,6 @@ const recentMedicalRecords =
           Sidebar navigation is shared across the dashboard.
           -------------------------------------------------------- */}
      <Sidebar
-  userName={currentUserName}
   familyId={membership.familyId}
 />
 
@@ -338,12 +338,12 @@ const recentMedicalRecords =
               </p>
 
               {/* [Dashboard → Family Switcher] */}
-              <a
+              <Link
                 href="/family"
                 className="mt-6 inline-flex rounded-xl bg-teal-50 px-5 py-3 text-sm font-semibold text-teal-700 hover:bg-teal-100"
               >
                 Switch Family →
-              </a>
+              </Link>
             </section>
 
             {/* [Dashboard → Family Invitation]
@@ -459,6 +459,7 @@ const recentMedicalRecords =
 {/* [Home → Upcoming Appointments] */}
 <UpcomingAppointments
   appointments={upcomingAppointments}
+  familyId={membership.familyId}
 />
         </div>
       </main>

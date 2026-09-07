@@ -7,7 +7,10 @@ import {
   requireFamilyMember,
   AuthorizationError,
 } from "@/lib/auth/authorization";
-import { verifyObjectExists } from "@/lib/s3";
+import {
+  getObjectMetadata,
+  verifyObjectContentSignature,
+} from "@/lib/s3";
 import { z } from "zod";
 
 const completeUploadSchema = z.object({
@@ -62,6 +65,11 @@ export async function POST(request: Request) {
         id: medicalRecordId,
         userId: session.user.id,
         uploadStatus: "PENDING",
+        accesses: {
+          some: {
+            familyId,
+          },
+        },
       },
     });
 
@@ -79,19 +87,54 @@ export async function POST(request: Request) {
       );
     }
 
-    // API → s3.ts → S3: don't trust the browser; verify the object exists.
-    const objectExists = await verifyObjectExists(
+    // API → s3.ts → S3: verify the uploaded object's trusted metadata.
+    const objectMetadata = await getObjectMetadata(
       medicalRecord.storageKey,
     );
 
-    if (!objectExists) {
+    if (!objectMetadata) {
       return NextResponse.json(
         { error: "Uploaded file was not found in storage" },
         { status: 409 },
       );
     }
 
-    // S3 verified → mark the database record as uploaded.
+    if (
+      medicalRecord.fileSize === null ||
+      medicalRecord.mimeType === null
+    ) {
+      return NextResponse.json(
+        { error: "Medical record is missing expected file metadata" },
+        { status: 500 },
+      );
+    }
+
+    if (
+      objectMetadata.contentLength !== medicalRecord.fileSize ||
+      objectMetadata.contentType !== medicalRecord.mimeType
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Uploaded file size or type does not match the approved upload",
+        },
+        { status: 409 },
+      );
+    }
+
+    const hasValidSignature = await verifyObjectContentSignature(
+      medicalRecord.storageKey,
+      medicalRecord.mimeType,
+    );
+
+    if (!hasValidSignature) {
+      return NextResponse.json(
+        { error: "Uploaded file content does not match its declared type" },
+        { status: 409 },
+      );
+    }
+
+    // S3 metadata and content signature verified → mark as uploaded.
     const updatedRecord = await prisma.medicalRecord.update({
       where: {
         id: medicalRecord.id,
