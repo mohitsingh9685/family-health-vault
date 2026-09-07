@@ -1,6 +1,7 @@
 
 import { NextResponse } from "next/server";
 
+import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
 import { signupSchema } from "@/lib/validation/auth";
@@ -64,6 +65,16 @@ export async function POST(req: Request) {
       status: 201,
     });
   } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return NextResponse.json(
+        { error: "Email already registered" },
+        { status: 409 },
+      );
+    }
+
     // [Signup API → Error Handling]
     // Log the real error server-side without exposing database
     // or implementation details to the client.

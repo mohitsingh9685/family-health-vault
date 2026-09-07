@@ -5,8 +5,18 @@ import { prisma } from "@/lib/prisma";
 
 import AppointmentForm from "@/components/appointments/appointment-form";
 import AppointmentActions from "@/components/appointments/appointment-actions";
+import {
+  formatAppointmentDate,
+  formatAppointmentTime,
+} from "@/lib/appointments";
 
-export default async function AppointmentsPage() {
+export default async function AppointmentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    familyId?: string;
+  }>;
+}) {
   // [Auth.js → Appointments]
   // Only authenticated users can access appointments.
   const session = await auth();
@@ -17,12 +27,14 @@ export default async function AppointmentsPage() {
 
   const userId = session.user.id;
 
-  // [Appointments → Family]
-  // Find the user's first family for now.
-  // Family switching can be connected here later using familyId.
+  // [Appointments → Selected Family]
+  // The URL value is never trusted without matching membership.
+  const { familyId } = await searchParams;
+
   const membership = await prisma.familyMember.findFirst({
     where: {
       userId,
+      ...(familyId ? { familyId } : {}),
     },
     include: {
       family: true,
@@ -33,7 +45,20 @@ export default async function AppointmentsPage() {
   });
 
   if (!membership) {
-    redirect("/onboarding");
+    const firstMembership = await prisma.familyMember.findFirst({
+      where: {
+        userId,
+      },
+      orderBy: {
+        createdAt: "asc",
+      },
+    });
+
+    if (!firstMembership) {
+      redirect("/onboarding");
+    }
+
+    redirect(`/appointments?familyId=${firstMembership.familyId}`);
   }
 
   // [Family → Appointment Form]
@@ -73,14 +98,7 @@ export default async function AppointmentsPage() {
 const appointments =
   await prisma.appointment.findMany({
     where: {
-      OR: [
-        {
-          createdById: userId,
-        },
-        {
-          patientId: userId,
-        },
-      ],
+      familyId: membership.familyId,
     },
 
     include: {
@@ -140,6 +158,7 @@ const appointments =
 
           <div className="mt-6">
             <AppointmentForm
+              familyId={membership.familyId}
               currentUserId={userId}
               currentUserName={currentUserName}
               familyMembers={familyMembers.map((member) => ({
@@ -227,12 +246,15 @@ const appointments =
           )}
 
           <p className="mt-2 text-sm font-medium text-teal-700">
-            {appointment.appointmentDate.toLocaleDateString()}{" "}
+            {formatAppointmentDate(
+              appointment.appointmentDate,
+              appointment.timeZone,
+            )}{" "}
             at{" "}
-            {appointment.appointmentDate.toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
+            {formatAppointmentTime(
+              appointment.appointmentDate,
+              appointment.timeZone,
+            )}
           </p>
 
           {appointment.hospitalAddress && (

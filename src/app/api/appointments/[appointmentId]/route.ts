@@ -19,6 +19,16 @@ async function getAuthorizedAppointment(
     where: {
       id: appointmentId,
 
+      // The actor must still belong to the appointment's family.
+      family: {
+        members: {
+          some: {
+            userId,
+          },
+        },
+      },
+
+      // Only the creator or patient may mutate the appointment.
       OR: [
         {
           createdById: userId,

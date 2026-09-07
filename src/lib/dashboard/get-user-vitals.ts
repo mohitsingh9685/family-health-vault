@@ -10,51 +10,34 @@ import { prisma } from "@/lib/prisma";
 */
 
 export async function getUserVitals(userId: string) {
-
-  const measurements =
-    await prisma.healthMeasurement.findMany({
-      where: {
-        userId,
-      },
-
-      orderBy: {
-        measuredAt: "desc",
-      },
-
-      take: 10,
-    });
-
+  const [bloodPressure, weight, bloodSugar, oxygenSaturation] =
+    await Promise.all([
+      prisma.healthMeasurement.findFirst({
+        where: { userId, type: "BLOOD_PRESSURE" },
+        orderBy: { measuredAt: "desc" },
+      }),
+      prisma.healthMeasurement.findFirst({
+        where: { userId, type: "WEIGHT" },
+        orderBy: { measuredAt: "desc" },
+      }),
+      prisma.healthMeasurement.findFirst({
+        where: { userId, type: "BLOOD_SUGAR" },
+        orderBy: { measuredAt: "desc" },
+      }),
+      prisma.healthMeasurement.findFirst({
+        where: { userId, type: "OXYGEN_SATURATION" },
+        orderBy: { measuredAt: "desc" },
+      }),
+    ]);
 
   return {
     bloodPressure:
-      measurements.find(
-        (m) => m.type === "BLOOD_PRESSURE"
-      )
-      ? `${measurements.find(
-          (m) => m.type === "BLOOD_PRESSURE"
-        )?.systolic}/${
-          measurements.find(
-            (m) => m.type === "BLOOD_PRESSURE"
-          )?.diastolic
-        }`
-      : "--",
-
-
-    weight:
-      measurements.find(
-        (m) => m.type === "WEIGHT"
-      )?.value?.toString() || "--",
-
-
-    sugar:
-      measurements.find(
-        (m) => m.type === "BLOOD_SUGAR"
-      )?.value?.toString() || "--",
-
-
-    spo2:
-      measurements.find(
-        (m) => m.type === "OXYGEN_SATURATION"
-      )?.value?.toString() || "--",
+      bloodPressure?.systolic != null &&
+      bloodPressure.diastolic != null
+        ? `${bloodPressure.systolic}/${bloodPressure.diastolic}`
+        : "--",
+    weight: weight?.value?.toString() ?? "--",
+    sugar: bloodSugar?.value?.toString() ?? "--",
+    spo2: oxygenSaturation?.value?.toString() ?? "--",
   };
 }

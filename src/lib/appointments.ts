@@ -12,16 +12,17 @@ import { prisma } from "@/lib/prisma";
  * The UI components should only receive the resulting data.
  */
 export async function getUpcomingAppointments(
-  familyUserIds: string[],
+  familyId: string,
   limit = 3,
 ) {
-  // No family members means there cannot be a family appointment.
-  if (familyUserIds.length === 0) {
-    return [];
-  }
-
   return prisma.appointment.findMany({
     where: {
+      // [Family Isolation]
+      // Every appointment belongs to exactly one family. Filtering by
+      // familyId prevents appointments leaking between shared members'
+      // other families.
+      familyId,
+
       // [Appointment Status]
       // Visited appointments must never appear in upcoming lists.
       status: "UPCOMING",
@@ -31,23 +32,6 @@ export async function getUpcomingAppointments(
       appointmentDate: {
         gte: new Date(),
       },
-
-      // [Family Authorization]
-      // An appointment belongs to this family when either:
-      // 1. a family member created it, or
-      // 2. a family member is the patient.
-      OR: [
-        {
-          createdById: {
-            in: familyUserIds,
-          },
-        },
-        {
-          patientId: {
-            in: familyUserIds,
-          },
-        },
-      ],
     },
 
     // [Appointment → Patient]
@@ -75,4 +59,29 @@ export async function getUpcomingAppointments(
     // Home only needs the latest 3.
     take: limit,
   });
+}
+
+/**
+ * Format a stored UTC appointment instant in the timezone captured from the
+ * user's browser when the appointment was created.
+ */
+export function formatAppointmentDate(
+  appointmentDate: Date,
+  timeZone: string,
+) {
+  return new Intl.DateTimeFormat("en-IN", {
+    dateStyle: "medium",
+    timeZone,
+  }).format(appointmentDate);
+}
+
+export function formatAppointmentTime(
+  appointmentDate: Date,
+  timeZone: string,
+) {
+  return new Intl.DateTimeFormat("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone,
+  }).format(appointmentDate);
 }

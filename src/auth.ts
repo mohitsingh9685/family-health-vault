@@ -2,7 +2,20 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 
 import { prisma } from "@/lib/prisma";
-import { verifyPassword } from "@/lib/password";
+import {
+  clearLoginFailures,
+  createLoginRateLimitKey,
+  isLoginAllowed,
+  recordLoginFailure,
+} from "@/lib/auth/login-rate-limit";
+import { hashPassword, verifyPassword } from "@/lib/password";
+import { loginSchema } from "@/lib/validation/auth";
+
+// Unknown users still perform one real bcrypt comparison, reducing the email
+// enumeration signal created by returning before password verification.
+const dummyPasswordHash = hashPassword(
+  "family-health-vault-invalid-credential",
+);
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -13,19 +26,36 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: {},
       },
 
-      async authorize(credentials) {
-        const email = credentials?.email as string;
-        const password = credentials?.password as string;
+      async authorize(credentials, request) {
+        const result = loginSchema.safeParse(credentials);
 
-        // [Prisma] Find the user stored in PostgreSQL.
+        if (!result.success) {
+          return null;
+        }
+
+        const { email, password } = result.data;
+        const rateLimitKey = createLoginRateLimitKey(email, request);
+
+        if (!(await isLoginAllowed(rateLimitKey))) {
+          return null;
+        }
+
+        // [Prisma] Find the normalized account stored in PostgreSQL.
         const user = await prisma.user.findUnique({
           where: { email },
         });
 
-        // Reject invalid credentials.
-        if (!user || !(await verifyPassword(password, user.passwordHash))) {
+        const passwordMatches = await verifyPassword(
+          password,
+          user?.passwordHash ?? (await dummyPasswordHash),
+        );
+
+        if (!user || !passwordMatches) {
+          await recordLoginFailure(rateLimitKey);
           return null;
         }
+
+        await clearLoginFailures(rateLimitKey);
 
         // [Auth.js] Pass the database user ID into the authenticated user.
         return {

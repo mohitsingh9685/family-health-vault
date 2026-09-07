@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { updateHealthMeasurementSchema } from "@/lib/validation/health-measurement";
+import {
+  persistedHealthMeasurementSchema,
+  updateHealthMeasurementSchema,
+} from "@/lib/validation/health-measurement";
 
 type RouteContext = {
   params: Promise<{ measurementId: string }>;
@@ -90,6 +93,46 @@ export async function PATCH(
       return NextResponse.json(
         { error: "Health measurement not found" },
         { status: 404 }
+      );
+    }
+
+    const mergedState = persistedHealthMeasurementSchema.safeParse({
+      type: result.data.type ?? existingMeasurement.type,
+      value:
+        result.data.value !== undefined
+          ? result.data.value
+          : existingMeasurement.value?.toNumber() ?? null,
+      unit:
+        result.data.unit !== undefined
+          ? result.data.unit
+          : existingMeasurement.unit,
+      systolic:
+        result.data.systolic !== undefined
+          ? result.data.systolic
+          : existingMeasurement.systolic,
+      diastolic:
+        result.data.diastolic !== undefined
+          ? result.data.diastolic
+          : existingMeasurement.diastolic,
+      context:
+        result.data.context !== undefined
+          ? result.data.context
+          : existingMeasurement.context,
+      measuredAt:
+        result.data.measuredAt ?? existingMeasurement.measuredAt,
+      notes:
+        result.data.notes !== undefined
+          ? result.data.notes
+          : existingMeasurement.notes,
+    });
+
+    if (!mergedState.success) {
+      return NextResponse.json(
+        {
+          error: "Update would create an invalid health measurement",
+          details: mergedState.error.flatten(),
+        },
+        { status: 400 },
       );
     }
 

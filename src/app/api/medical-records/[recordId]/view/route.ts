@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { createDownloadUrl } from "@/lib/s3";
+import {
+  createDownloadUrl,
+  getObjectMetadata,
+  verifyObjectContentSignature,
+} from "@/lib/s3";
 
 export async function GET(
   _request: Request,
@@ -54,6 +58,8 @@ export async function GET(
       },
       select: {
         storageKey: true,
+        fileSize: true,
+        mimeType: true,
       },
     });
 
@@ -68,6 +74,38 @@ export async function GET(
       return NextResponse.json(
         { error: "Medical file is not available" },
         { status: 404 },
+      );
+    }
+
+    if (record.fileSize === null || record.mimeType === null) {
+      return NextResponse.json(
+        { error: "Medical file metadata is incomplete" },
+        { status: 409 },
+      );
+    }
+
+    const objectMetadata = await getObjectMetadata(record.storageKey);
+
+    if (
+      !objectMetadata ||
+      objectMetadata.contentLength !== record.fileSize ||
+      objectMetadata.contentType !== record.mimeType
+    ) {
+      return NextResponse.json(
+        { error: "Medical file failed its storage integrity check" },
+        { status: 409 },
+      );
+    }
+
+    const hasValidSignature = await verifyObjectContentSignature(
+      record.storageKey,
+      record.mimeType,
+    );
+
+    if (!hasValidSignature) {
+      return NextResponse.json(
+        { error: "Medical file failed its content integrity check" },
+        { status: 409 },
       );
     }
 

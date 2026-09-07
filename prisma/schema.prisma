@@ -39,14 +39,15 @@ model Profile {
 }
 
 model Family {
-  id                     String                    @id @default(uuid())
-  name                   String
-  createdAt              DateTime                  @default(now())
-  updatedAt              DateTime                  @updatedAt
-  members                FamilyMember[]
-  invitations             FamilyInvitation[]
-  medicalRecordAccesses  MedicalRecordAccess[]
-  measurementAccesses    HealthMeasurementAccess[]
+  id                    String                    @id @default(uuid())
+  name                  String
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+  members               FamilyMember[]
+  invitations           FamilyInvitation[]
+  medicalRecordAccesses MedicalRecordAccess[]
+  measurementAccesses   HealthMeasurementAccess[]
+  appointments          Appointment[]
 }
 
 model FamilyMember {
@@ -138,6 +139,17 @@ model HealthMeasurement {
 
   @@index([userId, type])
   @@index([userId, measuredAt])
+  @@index([userId, type, measuredAt])
+}
+
+model LoginRateLimit {
+  key             String    @id
+  failedAttempts  Int       @default(0)
+  windowStartedAt DateTime  @default(now())
+  blockedUntil    DateTime?
+  updatedAt       DateTime  @updatedAt
+
+  @@index([updatedAt])
 }
 
 model HealthMeasurementAccess {
@@ -209,21 +221,27 @@ enum MedicalRecordUploadStatus {
 model Appointment {
   id String @id @default(uuid())
 
+  // [Appointment → Family]
+  // Every appointment is isolated to the family where it was created.
+  familyId String
+  family   Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
   // [Appointment → Creator]
   // User who created this appointment.
   createdById String
-  createdBy User @relation("CreatedAppointments", fields: [createdById], references: [id])
+  createdBy User @relation("CreatedAppointments", fields: [createdById], references: [id], onDelete: Cascade)
 
   // [Appointment → Patient]
   // User who will attend the appointment.
   patientId String
-  patient User @relation("PatientAppointments", fields: [patientId], references: [id])
+  patient User @relation("PatientAppointments", fields: [patientId], references: [id], onDelete: Cascade)
 
   hospitalName String
   hospitalAddress String?
   doctorName String?
 
   appointmentDate DateTime
+  timeZone       String   @default("Asia/Kolkata")
 
   // [Appointment → Status]
   // VISITED appointments are excluded from Home → Upcoming Appointments.
@@ -231,6 +249,10 @@ model Appointment {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([familyId, appointmentDate])
+  @@index([createdById])
+  @@index([patientId])
 }
 
 enum AppointmentStatus {
