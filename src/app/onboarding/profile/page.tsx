@@ -140,13 +140,9 @@ export default function ProfileSetupPage() {
             </p>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-xl bg-teal-700 px-4 py-3 font-semibold text-white hover:bg-teal-800 disabled:opacity-50"
-          >
-            {loading ? "Saving..." : "Continue"}
-          </button>
+          <button type="submit"
+          disabled={loading}
+          className="w-full rounded-xl bg-teal-700 px-4 py-3 font-semibold text-white hover:bg-teal-800 disabled:opacity-50" aria-busy={loading}>{loading ? "Saving..." : "Continue"}</button>
         </form>
       </div>
     </main>

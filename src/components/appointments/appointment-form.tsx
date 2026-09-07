@@ -265,13 +265,9 @@ export default function AppointmentForm({
       {/* [Appointment Form → API]
           This button will eventually submit to
           POST /api/appointments. */}
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="w-full rounded-xl bg-teal-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {isSubmitting ? "Saving..." : "Add Appointment"}
-      </button>
+      <button type="submit"
+      disabled={isSubmitting}
+      className="w-full rounded-xl bg-teal-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-60" aria-busy={isSubmitting}>{isSubmitting ? "Saving..." : "Add Appointment"}</button>
     </form>
   );
 }

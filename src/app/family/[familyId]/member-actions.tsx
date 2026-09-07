@@ -149,23 +149,15 @@ export function MemberActions({
     return (
       <div className="ml-4">
         <div className="flex flex-wrap justify-end gap-2">
-          <button
-            type="button"
-            onClick={transferOwnership}
-            disabled={isTransferring || isRemoving}
-            className="rounded-lg border border-teal-200 px-3 py-2 text-xs font-medium text-teal-700 transition hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isTransferring ? "Transferring..." : "Transfer ownership"}
-          </button>
+          <button type="button"
+          onClick={transferOwnership}
+          disabled={isTransferring || isRemoving}
+          className="rounded-lg border border-teal-200 px-3 py-2 text-xs font-medium text-teal-700 transition hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-50" aria-busy={isTransferring}>{isTransferring ? "Transferring..." : "Transfer ownership"}</button>
 
-          <button
-            type="button"
-            onClick={removeMember}
-            disabled={isRemoving || isTransferring}
-            className="rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isRemoving ? "Removing..." : "Remove"}
-          </button>
+          <button type="button"
+          onClick={removeMember}
+          disabled={isRemoving || isTransferring}
+          className="rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50" aria-busy={isRemoving}>{isRemoving ? "Removing..." : "Remove"}</button>
         </div>
 
         {error && (
@@ -185,14 +177,10 @@ export function MemberActions({
   ) {
     return (
       <div className="ml-4">
-        <button
-          type="button"
-          onClick={leaveFamily}
-          disabled={isLeaving}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isLeaving ? "Leaving..." : "Leave"}
-        </button>
+        <button type="button"
+        onClick={leaveFamily}
+        disabled={isLeaving}
+        className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" aria-busy={isLeaving}>{isLeaving ? "Leaving..." : "Leave"}</button>
 
         {error && (
           <p className="mt-2 text-xs text-red-600">

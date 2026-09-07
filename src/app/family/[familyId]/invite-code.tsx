@@ -65,14 +65,10 @@ export function InviteCode({
         to invite.
       </p>
 
-      <button
-        type="button"
-        onClick={generateCode}
-        disabled={isGenerating}
-        className="mt-5 rounded-lg bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {isGenerating ? "Generating..." : "Generate invitation code"}
-      </button>
+      <button type="button"
+      onClick={generateCode}
+      disabled={isGenerating}
+      className="mt-5 rounded-lg bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50" aria-busy={isGenerating}>{isGenerating ? "Generating..." : "Generate invitation code"}</button>
 
       {/* [Invitation API → Code Display]
           The raw code is shown only after successful generation. */}

@@ -123,13 +123,9 @@ export function FamilySettings({
             className="min-w-0 flex-1 rounded-lg border border-slate-300 px-4 py-3 text-slate-950 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100 disabled:bg-slate-100"
           />
 
-          <button
-            type="submit"
-            disabled={isSaving || isDeleting}
-            className="rounded-lg bg-slate-950 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
-          >
-            {isSaving ? "Saving..." : "Save"}
-          </button>
+          <button type="submit"
+          disabled={isSaving || isDeleting}
+          className="rounded-lg bg-slate-950 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50" aria-busy={isSaving}>{isSaving ? "Saving..." : "Save"}</button>
         </div>
       </form>
 
@@ -144,14 +140,10 @@ export function FamilySettings({
           and invitations.
         </p>
 
-        <button
-          type="button"
-          onClick={deleteFamily}
-          disabled={isDeleting || isSaving}
-          className="mt-4 rounded-lg border border-red-200 px-4 py-3 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
-        >
-          {isDeleting ? "Deleting..." : "Delete family"}
-        </button>
+        <button type="button"
+        onClick={deleteFamily}
+        disabled={isDeleting || isSaving}
+        className="mt-4 rounded-lg border border-red-200 px-4 py-3 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50" aria-busy={isDeleting}>{isDeleting ? "Deleting..." : "Delete family"}</button>
       </div>
 
       {error && (

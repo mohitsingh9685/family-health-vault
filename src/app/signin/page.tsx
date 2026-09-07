@@ -131,13 +131,9 @@ export default function SigninPage() {
             </p>
           )}
 
-          <button
-            type="submit"
-            disabled={isSubmitting || !email.trim() || !password}
-            className="mt-6 w-full rounded-lg bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isSubmitting ? "Signing in..." : "Sign in"}
-          </button>
+          <button type="submit"
+          disabled={isSubmitting || !email.trim() || !password}
+          className="mt-6 w-full rounded-lg bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50" aria-busy={isSubmitting}>{isSubmitting ? "Signing in..." : "Sign in"}</button>
 
           <p className="mt-5 text-center text-sm text-slate-600">
             Don&apos;t have an account?{" "}
