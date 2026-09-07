@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 
 import { auth } from "@/auth";
+import Sidebar from "@/components/dashboard/sidebar";
 import { prisma } from "@/lib/prisma";
 
 // [Family Dashboard → Invitation UI]
@@ -83,8 +84,16 @@ export default async function FamilyPage({
   const isOwner = membership.role === "OWNER";
 
   return (
-    // [Family Dashboard UI]
-    <section className="min-h-[calc(100vh-73px)] bg-slate-50 px-6 py-12 text-slate-950">
+    <div className="flex min-h-screen bg-slate-50 text-slate-950">
+      <Sidebar
+        familyId={family.id}
+        familyName={family.name}
+        familyRole={membership.role}
+        memberCount={family.members.length}
+      />
+
+      <div className="min-w-0 flex-1">
+        <section className="min-h-screen bg-slate-50 px-6 py-12 text-slate-950">
       <div className="mx-auto max-w-5xl">
         {/* [Family Dashboard → Family Information] */}
         <div>
@@ -161,19 +170,9 @@ export default async function FamilyPage({
           isOwner={isOwner}
         />
 
-        {/* [Family Dashboard → Future Medical Records]
-            Medical-record functionality will be implemented later.
-            No medical data is stored by this placeholder. */}
-        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-slate-950">
-            Medical Records
-          </h2>
-
-          <p className="mt-2 text-slate-600">
-            Medical records will appear here in a later issue.
-          </p>
+          </div>
         </section>
       </div>
-    </section>
+    </div>
   );
 }

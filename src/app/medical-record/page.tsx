@@ -1,14 +1,17 @@
 import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
+import Sidebar from "@/components/dashboard/sidebar";
+import MedicalRecordWorkspace from "@/components/medical-record/medical-record-workspace";
 import { prisma } from "@/lib/prisma";
 
-import Sidebar from "@/components/dashboard/sidebar";
-import MedicalRecordPage from "@/components/medical-record/medical-record-page";
-
-export default async function MedicalRecordRoute() {
-  // [Auth.js → Medical Records]
-  // Only authenticated users can access medical records.
+export default async function MedicalRecordRoute({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    familyId?: string;
+  }>;
+}) {
   const session = await auth();
 
   if (!session?.user?.id) {
@@ -16,45 +19,125 @@ export default async function MedicalRecordRoute() {
   }
 
   const userId = session.user.id;
-
-  // [Auth.js → Prisma]
-  // Find the user's current/default family.
-  const membership = await prisma.familyMember.findFirst({
-    where: {
-      userId,
-    },
+  const { familyId } = await searchParams;
+  const memberships = await prisma.familyMember.findMany({
+    where: { userId },
     include: {
-      family: true,
+      family: {
+        include: {
+          _count: {
+            select: { members: true },
+          },
+        },
+      },
     },
-    orderBy: {
-      createdAt: "asc",
-    },
+    orderBy: { createdAt: "asc" },
   });
 
-  if (!membership) {
+  if (memberships.length === 0) {
     redirect("/onboarding");
   }
 
+  const membership = familyId
+    ? memberships.find((item) => item.familyId === familyId)
+    : memberships[0];
+
+  if (!membership) {
+    redirect(
+      `/medical-record?familyId=${encodeURIComponent(memberships[0].familyId)}`,
+    );
+  }
+
+  const [familyMembers, medicalRecords] = await Promise.all([
+    prisma.familyMember.findMany({
+      where: { familyId: membership.familyId },
+      select: {
+        userId: true,
+        user: {
+          select: {
+            email: true,
+            profile: {
+              select: { name: true },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.medicalRecord.findMany({
+      where: {
+        uploadStatus: "UPLOADED",
+        OR: [
+          { userId },
+          {
+            accesses: {
+              some: { familyId: membership.familyId },
+            },
+          },
+        ],
+      },
+      select: {
+        id: true,
+        title: true,
+        type: true,
+        description: true,
+        processingStatus: true,
+        createdAt: true,
+        user: {
+          select: {
+            id: true,
+            email: true,
+            profile: {
+              select: { name: true },
+            },
+          },
+        },
+      },
+      orderBy: [{ createdAt: "desc" }, { title: "asc" }],
+    }),
+  ]);
+
+  const members = familyMembers.map((member) => ({
+    userId: member.userId,
+    name: member.user.profile?.name || member.user.email.split("@")[0],
+  }));
   const currentUserName =
-    session.user.name ||
+    members.find((member) => member.userId === userId)?.name ||
     session.user.email?.split("@")[0] ||
     "User";
 
   return (
     <div className="flex min-h-screen bg-slate-50">
-      {/* [Dashboard → Sidebar] */}
       <Sidebar
         familyId={membership.familyId}
+        familyName={membership.family.name}
+        familyRole={membership.role}
+        memberCount={membership.family._count.members}
       />
 
-      {/* [Medical Records → Main Workspace] */}
-      <main className="flex-1 overflow-y-auto">
-        <MedicalRecordPage
-          familyId={membership.familyId}
-          familyName={membership.family.name}
-          userName={currentUserName}
-        />
-      </main>
+      <MedicalRecordWorkspace
+        familyId={membership.familyId}
+        familyName={membership.family.name}
+        userName={currentUserName}
+        families={memberships.map((item) => ({
+          id: item.familyId,
+          name: item.family.name,
+        }))}
+        members={members}
+        records={medicalRecords.map((record) => ({
+          id: record.id,
+          title: record.title,
+          type: record.type,
+          description: record.description,
+          processingStatus: record.processingStatus,
+          createdAt: record.createdAt.toISOString(),
+          owner: {
+            userId: record.user.id,
+            name:
+              record.user.profile?.name || record.user.email.split("@")[0],
+          },
+        }))}
+      />
     </div>
   );
 }

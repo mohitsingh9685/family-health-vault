@@ -1,19 +1,30 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-## Getting Started
---docker
-docker compose up -d
+## Local development with Docker
 
-First, run the development server:
+After configuring `.env`, start PostgreSQL and the Next.js development server together:
+
+```bash
+docker compose up -d
+```
+
+Open [http://localhost:3000](http://localhost:3000). The app container automatically generates the Prisma client, applies pending migrations, and runs `npm run dev`.
+
+Useful commands:
+
+```bash
+docker compose logs -f app
+docker compose down
+```
+
+`Dockerfile.dev` is for local development only. Production deployments should use `npm run build` and `npm run start`.
+
+## Local development without Docker
+
+Start PostgreSQL, then run:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.

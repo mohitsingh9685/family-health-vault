@@ -2,22 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
 
 export function SiteHeader() {
   const pathname = usePathname();
 
-  // [Navbar → Dashboard]
-  // Logout remains available on the authenticated dashboard.
-  const isHomePage = pathname === "/home";
-
-  async function handleLogout() {
-    // [Navbar → Auth.js]
-    // Auth.js clears the authenticated session and returns the user
-    // to the public landing page.
-    await signOut({
-      callbackUrl: "/",
-    });
+  if (
+    pathname === "/home" ||
+    pathname === "/health-trends" ||
+    pathname === "/medical-record" ||
+    pathname === "/appointments" ||
+    pathname === "/settings" ||
+    pathname.startsWith("/family/")
+  ) {
+    return null;
   }
 
   return (
@@ -32,20 +29,6 @@ export function SiteHeader() {
           Family Health Vault
         </Link>
 
-        {/* --------------------------------------------------------
-            [Navbar → Dashboard]
-            Logout is intentionally placed at the top-right
-            of the authenticated home page.
-            -------------------------------------------------------- */}
-        {isHomePage && (
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 hover:text-slate-950"
-          >
-            Logout
-          </button>
-        )}
       </div>
     </header>
   );

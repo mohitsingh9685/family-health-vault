@@ -37,6 +37,7 @@ export async function GET(
     // Return only records explicitly shared with this family.
     const medicalRecords = await prisma.medicalRecord.findMany({
       where: {
+        uploadStatus: "UPLOADED",
         accesses: {
           some: {
             familyId,

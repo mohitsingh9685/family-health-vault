@@ -14,6 +14,7 @@ export type SettingsSection =
 
 type SettingsNavigationProps = {
   activeSection: SettingsSection;
+  familyId?: string;
 };
 
 const sections = [
@@ -45,6 +46,7 @@ const sections = [
 
 export default function SettingsNavigation({
   activeSection,
+  familyId,
 }: SettingsNavigationProps) {
   return (
     <nav
@@ -58,7 +60,11 @@ export default function SettingsNavigation({
         return (
           <Link
             key={section.id}
-            href={`/settings?section=${section.id}`}
+            href={`/settings?section=${section.id}${
+              familyId
+                ? `&familyId=${encodeURIComponent(familyId)}`
+                : ""
+            }`}
             aria-current={isActive ? "page" : undefined}
             className={`flex min-w-44 items-center gap-3 rounded-xl px-4 py-3 transition lg:min-w-0 ${
               isActive
