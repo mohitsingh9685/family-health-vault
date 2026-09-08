@@ -127,14 +127,10 @@ export default function AccountSettings({
               </p>
             )}
 
-            <button
-              type="button"
-              onClick={deleteAccount}
-              disabled={confirmation !== "DELETE" || isDeleting}
-              className="mt-4 rounded-xl bg-red-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isDeleting ? "Deleting..." : "Delete account permanently"}
-            </button>
+            <button type="button"
+            onClick={deleteAccount}
+            disabled={confirmation !== "DELETE" || isDeleting}
+            className="mt-4 rounded-xl bg-red-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50" aria-busy={isDeleting}>{isDeleting ? "Deleting..." : "Delete account permanently"}</button>
           </div>
         )}
       </div>

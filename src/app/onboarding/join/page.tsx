@@ -115,13 +115,9 @@ export default function JoinFamilyPage() {
             </p>
           )}
 
-          <button
-            type="submit"
-            disabled={isJoining || !code.trim()}
-            className="mt-6 w-full rounded-lg bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isJoining ? "Joining..." : "Join family"}
-          </button>
+          <button type="submit"
+          disabled={isJoining || !code.trim()}
+          className="mt-6 w-full rounded-lg bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50" aria-busy={isJoining}>{isJoining ? "Joining..." : "Join family"}</button>
         </form>
       </div>
     </main>

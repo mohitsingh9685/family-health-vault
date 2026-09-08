@@ -168,13 +168,9 @@ export default function SignupPage() {
             )}
 
             {/* [Signup Form → Submit] */}
-            <button
-              type="submit"
-              disabled={isSubmitting || !email.trim() || !password}
-              className="mt-6 w-full rounded-lg bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isSubmitting ? "Creating account..." : "Create account"}
-            </button>
+            <button type="submit"
+            disabled={isSubmitting || !email.trim() || !password}
+            className="mt-6 w-full rounded-lg bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50" aria-busy={isSubmitting}>{isSubmitting ? "Creating account..." : "Create account"}</button>
 
             {/* [Signup → Existing Auth.js Sign-in]
                 Existing users can still move to the normal signin flow. */}

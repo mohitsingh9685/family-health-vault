@@ -36,3 +36,34 @@ body {
      Use the Geist font already loaded by layout.tsx. */
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
+
+/* Async actions expose aria-busy while their request is in flight. */
+button[aria-busy="true"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+button[aria-busy="true"]::before {
+  width: 1rem;
+  height: 1rem;
+  flex: none;
+  content: "";
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 9999px;
+  animation: async-button-spin 700ms linear infinite;
+}
+
+@keyframes async-button-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button[aria-busy="true"]::before {
+    animation-duration: 1.5s;
+  }
+}

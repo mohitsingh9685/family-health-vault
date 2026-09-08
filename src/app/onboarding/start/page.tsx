@@ -106,13 +106,9 @@ export default function StartFamilyPage() {
             </p>
           )}
 
-          <button
-            type="submit"
-            disabled={isSubmitting || !familyName.trim()}
-            className="mt-6 w-full rounded-lg bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isSubmitting ? "Creating family..." : "Create family"}
-          </button>
+          <button type="submit"
+          disabled={isSubmitting || !familyName.trim()}
+          className="mt-6 w-full rounded-lg bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50" aria-busy={isSubmitting}>{isSubmitting ? "Creating family..." : "Create family"}</button>
 
           {/* [Create Family → Join Family]
               Users who already received an invitation can switch

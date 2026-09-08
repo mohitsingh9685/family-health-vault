@@ -131,13 +131,9 @@ export default function SecuritySettingsForm() {
           )}
 
           <div className="flex justify-end border-t border-slate-200 pt-5">
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="rounded-xl bg-teal-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isSaving ? "Changing..." : "Change password"}
-            </button>
+            <button type="submit"
+            disabled={isSaving}
+            className="rounded-xl bg-teal-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50" aria-busy={isSaving}>{isSaving ? "Changing..." : "Change password"}</button>
           </div>
         </form>
       </div>

@@ -190,13 +190,9 @@ export default function ProfileSettingsForm({
         )}
 
         <div className="flex justify-end border-t border-slate-200 pt-5">
-          <button
-            type="submit"
-            disabled={isSaving}
-            className="rounded-xl bg-teal-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isSaving ? "Saving..." : "Save profile"}
-          </button>
+          <button type="submit"
+          disabled={isSaving}
+          className="rounded-xl bg-teal-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50" aria-busy={isSaving}>{isSaving ? "Saving..." : "Save profile"}</button>
         </div>
       </form>
     </section>

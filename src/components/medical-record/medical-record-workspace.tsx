@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Activity,
   CalendarDays,
   ExternalLink,
   FilePlus2,
@@ -465,14 +464,10 @@ export default function MedicalRecordWorkspace({
             </div>
 
             <div className="mt-5 flex justify-end">
-              <button
-                type="button"
-                onClick={handleUpload}
-                disabled={uploading}
-                className="rounded-xl bg-teal-700 px-5 py-3 text-sm font-semibold text-white hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {uploading ? "Uploading…" : "Upload record"}
-              </button>
+              <button type="button"
+              onClick={handleUpload}
+              disabled={uploading}
+              className="rounded-xl bg-teal-700 px-5 py-3 text-sm font-semibold text-white hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50" aria-busy={uploading}>{uploading ? "Uploading…" : "Upload record"}</button>
             </div>
           </section>
         )}
@@ -572,14 +567,10 @@ export default function MedicalRecordWorkspace({
             </div>
 
             <div className="mt-5 flex justify-end">
-              <button
-                type="button"
-                onClick={handleMeasurement}
-                disabled={savingMeasurement}
-                className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {savingMeasurement ? "Saving…" : "Save measurement"}
-              </button>
+              <button type="button"
+              onClick={handleMeasurement}
+              disabled={savingMeasurement}
+              className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50" aria-busy={savingMeasurement}>{savingMeasurement ? "Saving…" : "Save measurement"}</button>
             </div>
           </section>
         )}

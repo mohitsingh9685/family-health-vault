@@ -362,16 +362,10 @@ export default function MedicalRecordPage({
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={handleUpload}
-              disabled={uploading}
-              className="w-full rounded-xl bg-teal-700 px-5 py-3 font-semibold text-white hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {uploading
-                ? "Uploading..."
-                : "Upload Medical Record"}
-            </button>
+            <button type="button"
+            onClick={handleUpload}
+            disabled={uploading}
+            className="w-full rounded-xl bg-teal-700 px-5 py-3 font-semibold text-white hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50">{uploading ? "Uploading..." : "Upload Medical Record"}</button>
           </div>
         </section>
 
@@ -490,16 +484,10 @@ export default function MedicalRecordPage({
               />
             </div>
 
-            <button
-              type="button"
-              onClick={handleMeasurement}
-              disabled={savingMeasurement}
-              className="w-full rounded-xl bg-slate-900 px-5 py-3 font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {savingMeasurement
-                ? "Saving..."
-                : "Save Measurement"}
-            </button>
+            <button type="button"
+            onClick={handleMeasurement}
+            disabled={savingMeasurement}
+            className="w-full rounded-xl bg-slate-900 px-5 py-3 font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50">{savingMeasurement ? "Saving..." : "Save Measurement"}</button>
           </div>
         </section>
       </div>
